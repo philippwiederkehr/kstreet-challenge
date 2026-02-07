@@ -4,7 +4,7 @@
 
 // ── Configuration ──────────────────────────────
 const CONFIG = {
-  SHEET_ID: 'PASTE_YOUR_SHEET_ID_HERE',
+  SHEET_ID: '1JOHSDazm4loIgjV1CfLTwpV-MvY6CR-CKczUylTKvSU',
   CHALLENGES_SHEET: 'Challenges',
   COMPLETIONS_SHEET: 'Completions',
   START_DATE: '2026-02-20',
