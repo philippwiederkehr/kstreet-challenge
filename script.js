@@ -5,7 +5,7 @@
 // ── Configuration ──────────────────────────────
 const CONFIG = {
   SHEET_ID: '1JOHSDazm4loIgjV1CfLTwpV-MvY6CR-CKczUylTKvSU',
-  CHALLENGES_SHEET: 'Challenges',
+  CHALLENGES_SHEET: 'Tabelle1',
   COMPLETIONS_SHEET: 'Completions',
   START_DATE: '2026-02-20',
   END_DATE: '2026-03-14',
@@ -32,7 +32,7 @@ async function init() {
       fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
     ]);
 
-    challengesData = challenges;
+    challengesData = normalizeChallenges(challenges);
     completionsData = completions.filter(r => r['Confirmed'] && r['Confirmed'].toUpperCase() === 'YES');
 
     renderAll();
@@ -201,6 +201,54 @@ function splitCSVLines(text) {
   }
 
   return lines;
+}
+
+// ── Normalize Challenges Sheet ─────────────────
+// The sheet uses grouped rows: category-only rows have just column A filled,
+// challenge rows have columns B-D filled. We flatten into uniform objects.
+function normalizeChallenges(raw) {
+  const challenges = [];
+  let currentCategory = '';
+
+  raw.forEach(row => {
+    const type = (row['challenge type'] || '').trim();
+    const name = (row['challenge name'] || '').trim();
+    const desc = (row['challenge description'] || '').trim();
+    const pts  = (row['points'] || '').toString().trim();
+
+    // Category header row: has type but no challenge name
+    if (type && !name) {
+      currentCategory = type;
+      return;
+    }
+
+    // Subtitle row (e.g. "for the common good of Kstreet") with a challenge
+    if (type && name) {
+      // The type column has a subtitle, not a new category - keep current category
+      // But if currentCategory is empty, use type as category
+      if (!currentCategory) currentCategory = type;
+    }
+
+    // Skip empty rows
+    if (!name) return;
+
+    // Parse points - handle special values like "200/275/350" or "Up to 400" or "?"
+    let points = parseFloat(pts);
+    if (isNaN(points)) {
+      // Take first number from strings like "200/275/350"
+      const match = pts.match(/-?\d+/);
+      points = match ? parseFloat(match[0]) : 0;
+    }
+
+    challenges.push({
+      'Category': currentCategory,
+      'Challenge Name': name,
+      'Description': desc,
+      'Points': points
+    });
+  });
+
+  return challenges;
 }
 
 // ── Data Processing ────────────────────────────
@@ -639,7 +687,7 @@ function categoryToClass(category) {
     'Kstreet Chemistry': 'cat-kstreet-chemistry',
     'Chaos Entertainment': 'cat-chaos-entertainment',
     'Unhinged Legends': 'cat-unhinged-legends',
-    'Opening Night': 'cat-opening-night'
+    'Opening Night Shenanigans': 'cat-opening-night'
   };
   return map[category] || '';
 }
