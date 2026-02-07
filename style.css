@@ -1,0 +1,894 @@
+/* =============================================
+   KSTREET CHALLENGE - Colorful Retro Arcade
+   Bright & fun like Mario, sparkly like K-pop
+   ============================================= */
+
+/* --- CSS Variables --- */
+:root {
+  --bg-main:     #1e0a3c;   /* deep purple base */
+  --bg-card:     #2a1350;   /* card purple */
+  --bg-card-alt: #321860;
+  --primary:     #ff2d78;   /* hot pink */
+  --secondary:   #ffb800;   /* golden yellow */
+  --accent:      #00d4ff;   /* electric blue */
+  --mint:        #00e89d;   /* mint green */
+  --coral:       #ff6b4a;   /* warm coral */
+  --lilac:       #c77dff;   /* soft lilac */
+  --gold:        #ffd700;
+  --silver:      #d4d4f0;
+  --bronze:      #f0a050;
+  --text:        #ffffff;
+  --text-dim:    #a090cc;
+  --danger:      #ff2d55;
+  --success:     #00e89d;
+  --cat-hero:    #00e89d;   /* House Heros - mint */
+  --cat-chem:    #ff2d78;   /* Chemistry - hot pink */
+  --cat-chaos:   #ffb800;   /* Chaos - golden */
+  --cat-legend:  #c77dff;   /* Unhinged - lilac */
+  --cat-party:   #ff6b4a;   /* Opening Night - coral */
+  --pixel:       2px;
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-main);
+  background-image:
+    radial-gradient(ellipse at 15% 30%, rgba(255, 45, 120, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 60%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(199, 125, 255, 0.06) 0%, transparent 40%);
+  color: var(--text);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* --- Pixel Font --- */
+.hero-title,
+.section-title,
+.countdown-text,
+.nav-link,
+.filter-tab,
+.stat-value,
+.loading-text,
+.podium-name,
+.podium-score,
+.rank-number,
+.footer,
+.rules-summary {
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* --- Utility --- */
+.hidden {
+  display: none !important;
+}
+
+/* =============================================
+   Loading Screen
+   ============================================= */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  background-image: radial-gradient(ellipse at center, rgba(199, 125, 255, 0.15) 0%, transparent 60%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  gap: 24px;
+  transition: opacity 0.4s;
+}
+
+.loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-text {
+  font-size: 13px;
+  color: var(--primary);
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(255, 45, 120, 0.5);
+}
+
+.loading-bar-track {
+  width: 240px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    var(--pixel) 0 0 0 rgba(255,255,255,0.15),
+    calc(-1 * var(--pixel)) 0 0 0 rgba(255,255,255,0.15),
+    0 var(--pixel) 0 0 rgba(255,255,255,0.15),
+    0 calc(-1 * var(--pixel)) 0 0 rgba(255,255,255,0.15);
+}
+
+.loading-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+  animation: loading-progress 2s ease-in-out forwards;
+}
+
+@keyframes loading-progress {
+  0%   { width: 0%; }
+  50%  { width: 60%; }
+  90%  { width: 85%; }
+  100% { width: 100%; }
+}
+
+/* --- Blink Animation --- */
+.blink {
+  animation: blink-anim 1s step-end infinite;
+}
+
+@keyframes blink-anim {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* --- Bounce --- */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* --- Rainbow shift --- */
+@keyframes rainbow-glow {
+  0%   { text-shadow: 0 0 20px rgba(255, 45, 120, 0.6), 3px 3px 0 rgba(255, 45, 120, 0.4); }
+  33%  { text-shadow: 0 0 20px rgba(0, 212, 255, 0.6), 3px 3px 0 rgba(0, 212, 255, 0.4); }
+  66%  { text-shadow: 0 0 20px rgba(255, 184, 0, 0.6), 3px 3px 0 rgba(255, 184, 0, 0.4); }
+  100% { text-shadow: 0 0 20px rgba(255, 45, 120, 0.6), 3px 3px 0 rgba(255, 45, 120, 0.4); }
+}
+
+/* =============================================
+   Hero Section
+   ============================================= */
+.hero {
+  position: relative;
+  background: linear-gradient(135deg, #1a0835 0%, #2d1060 40%, #1a0835 100%);
+  padding: 48px 16px 36px;
+  text-align: center;
+  overflow: hidden;
+  border-bottom: 3px solid;
+  border-image: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--mint)) 1;
+}
+
+/* Sparkle overlay instead of scanlines */
+.scanline-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.25), transparent),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 10% 60%, rgba(255,255,255,0.15), transparent),
+    radial-gradient(1px 1px at 90% 50%, rgba(255,255,255,0.2), transparent);
+  pointer-events: none;
+  z-index: 1;
+  animation: sparkle-float 4s ease-in-out infinite alternate;
+}
+
+@keyframes sparkle-float {
+  0%   { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-title {
+  font-size: 22px;
+  color: var(--text);
+  text-shadow:
+    3px 3px 0 var(--primary),
+    0 0 30px rgba(255, 45, 120, 0.4);
+  line-height: 1.8;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+  animation: rainbow-glow 6s ease-in-out infinite;
+}
+
+.hero-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  letter-spacing: 3px;
+}
+
+.countdown {
+  margin-bottom: 24px;
+}
+
+.countdown-text {
+  font-size: 12px;
+  color: var(--secondary);
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(255, 184, 0, 0.5);
+  animation: bounce 2s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* --- XP Bar --- */
+.xp-bar-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.xp-bar-label {
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  font-family: 'Press Start 2P', monospace;
+}
+
+.xp-bar-track {
+  height: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    var(--pixel) 0 0 0 rgba(255,255,255,0.12),
+    calc(-1 * var(--pixel)) 0 0 0 rgba(255,255,255,0.12),
+    0 var(--pixel) 0 0 rgba(255,255,255,0.12),
+    0 calc(-1 * var(--pixel)) 0 0 rgba(255,255,255,0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--coral), var(--secondary), var(--mint), var(--accent));
+  background-size: 200% 100%;
+  animation: xp-gradient 3s linear infinite;
+  transition: width 1s ease-out;
+  position: relative;
+}
+
+@keyframes xp-gradient {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.xp-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  animation: xp-shine 1.5s ease-in-out infinite;
+}
+
+@keyframes xp-shine {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 1; }
+}
+
+.xp-bar-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 8px;
+  color: var(--text-dim);
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* =============================================
+   Navigation
+   ============================================= */
+.pixel-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px 8px;
+  background: rgba(30, 10, 60, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid rgba(255, 45, 120, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-link {
+  font-size: 8px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 8px 12px;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+  background: rgba(255, 45, 120, 0.1);
+  text-shadow: 0 0 10px rgba(255, 45, 120, 0.4);
+}
+
+/* =============================================
+   Stats Bar
+   ============================================= */
+.stats-bar {
+  padding: 20px 16px;
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(199, 125, 255, 0.15);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.stat-box {
+  background: var(--bg-card);
+  padding: 14px 10px;
+  text-align: center;
+  border: 2px solid rgba(199, 125, 255, 0.25);
+  transition: border-color 0.3s;
+}
+
+.stat-box:hover {
+  border-color: rgba(199, 125, 255, 0.5);
+}
+
+.stat-box:nth-child(1) .stat-value { color: var(--accent); }
+.stat-box:nth-child(2) .stat-value { color: var(--mint); }
+.stat-box:nth-child(3) .stat-value { color: var(--primary); }
+.stat-box:nth-child(4) .stat-value { color: var(--secondary); }
+
+.stat-value {
+  font-size: 14px;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.stat-label {
+  font-size: 7px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* =============================================
+   Sections (shared)
+   ============================================= */
+.section {
+  padding: 36px 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.section-title {
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 28px;
+  letter-spacing: 3px;
+  text-shadow: 2px 2px 0 var(--primary);
+}
+
+.section-title::before,
+.section-title::after {
+  content: ' \2b50 ';
+}
+
+/* =============================================
+   Leaderboard - Podium (Top 3)
+   ============================================= */
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 28px;
+  min-height: 220px;
+}
+
+.podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.podium-crown {
+  font-size: 28px;
+  margin-bottom: 4px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.podium-place.silver .podium-crown { animation-delay: 0.3s; }
+.podium-place.bronze .podium-crown { animation-delay: 0.6s; }
+
+.podium-name {
+  font-size: 8px;
+  margin-bottom: 6px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.podium-score {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.podium-bar {
+  width: 90px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+/* 1st place */
+.podium-place.gold .podium-name  { color: var(--secondary); text-shadow: 0 0 10px rgba(255, 184, 0, 0.4); }
+.podium-place.gold .podium-score { color: var(--secondary); }
+.podium-place.gold .podium-bar   {
+  height: 115px;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.08) 100%);
+  border-color: var(--gold);
+}
+
+/* 2nd place */
+.podium-place.silver .podium-name  { color: var(--silver); }
+.podium-place.silver .podium-score { color: var(--silver); }
+.podium-place.silver .podium-bar   {
+  height: 85px;
+  background: linear-gradient(180deg, rgba(212, 212, 240, 0.25) 0%, rgba(212, 212, 240, 0.05) 100%);
+  border-color: var(--silver);
+}
+
+/* 3rd place */
+.podium-place.bronze .podium-name  { color: var(--bronze); }
+.podium-place.bronze .podium-score { color: var(--bronze); }
+.podium-place.bronze .podium-bar   {
+  height: 65px;
+  background: linear-gradient(180deg, rgba(240, 160, 80, 0.25) 0%, rgba(240, 160, 80, 0.05) 100%);
+  border-color: var(--bronze);
+}
+
+/* =============================================
+   Leaderboard - Rankings Table
+   ============================================= */
+.rankings-table {
+  max-width: 500px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(199, 125, 255, 0.15);
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s;
+}
+
+.rank-row:hover {
+  background: rgba(255, 45, 120, 0.06);
+}
+
+.rank-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rank-row:nth-child(even):hover {
+  background: rgba(255, 45, 120, 0.08);
+}
+
+.rank-number {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 32px;
+  text-align: right;
+}
+
+.rank-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.rank-score {
+  font-weight: bold;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--secondary);
+  text-shadow: 0 0 6px rgba(255, 184, 0, 0.3);
+}
+
+.rank-row.zero-points .rank-name {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.rank-row.zero-points .rank-score {
+  color: rgba(255, 255, 255, 0.2);
+  text-shadow: none;
+}
+
+/* =============================================
+   Challenge Browser
+   ============================================= */
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.filter-tab {
+  font-size: 7px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  border: 2px solid rgba(199, 125, 255, 0.2);
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.filter-tab:hover {
+  color: var(--text);
+  border-color: var(--primary);
+  background: rgba(255, 45, 120, 0.1);
+}
+
+.filter-tab.active {
+  background: var(--primary);
+  color: var(--text);
+  border-color: var(--primary);
+  box-shadow: 0 0 12px rgba(255, 45, 120, 0.4);
+}
+
+/* --- Challenge Cards --- */
+.challenge-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.challenge-card {
+  background: var(--bg-card);
+  padding: 16px;
+  position: relative;
+  border: 2px solid rgba(199, 125, 255, 0.15);
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.challenge-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.challenge-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.challenge-name {
+  font-size: 12px;
+  font-weight: bold;
+  flex: 1;
+  color: var(--text);
+}
+
+.challenge-points {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--secondary);
+  white-space: nowrap;
+  text-shadow: 0 0 6px rgba(255, 184, 0, 0.3);
+}
+
+.challenge-points.negative {
+  color: var(--danger);
+  text-shadow: 0 0 6px rgba(255, 45, 85, 0.3);
+}
+
+.challenge-category-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  border: 1px solid currentColor;
+}
+
+.challenge-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.challenge-completions {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.challenge-completions strong {
+  color: var(--mint);
+}
+
+/* Category colors */
+.cat-house-heros       { border-left: 4px solid var(--cat-hero) !important; }
+.cat-kstreet-chemistry { border-left: 4px solid var(--cat-chem) !important; }
+.cat-chaos-entertainment { border-left: 4px solid var(--cat-chaos) !important; }
+.cat-unhinged-legends  { border-left: 4px solid var(--cat-legend) !important; }
+.cat-opening-night     { border-left: 4px solid var(--cat-party) !important; }
+
+.cat-house-heros .challenge-name       { color: var(--cat-hero); }
+.cat-kstreet-chemistry .challenge-name { color: var(--cat-chem); }
+.cat-chaos-entertainment .challenge-name { color: var(--cat-chaos); }
+.cat-unhinged-legends .challenge-name  { color: var(--cat-legend); }
+.cat-opening-night .challenge-name     { color: var(--cat-party); }
+
+.cat-tag-house-heros       { background: rgba(0, 232, 157, 0.12); color: var(--cat-hero); }
+.cat-tag-kstreet-chemistry { background: rgba(255, 45, 120, 0.12); color: var(--cat-chem); }
+.cat-tag-chaos-entertainment { background: rgba(255, 184, 0, 0.12); color: var(--cat-chaos); }
+.cat-tag-unhinged-legends  { background: rgba(199, 125, 255, 0.12); color: var(--cat-legend); }
+.cat-tag-opening-night     { background: rgba(255, 107, 74, 0.12); color: var(--cat-party); }
+
+/* =============================================
+   Recent Completions Feed
+   ============================================= */
+.feed-list {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.feed-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  position: relative;
+  border: 2px solid rgba(199, 125, 255, 0.12);
+  transition: transform 0.15s, border-color 0.2s;
+}
+
+.feed-item:hover {
+  transform: translateX(3px);
+  border-color: rgba(199, 125, 255, 0.3);
+}
+
+.feed-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.feed-content {
+  flex: 1;
+}
+
+.feed-text {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.feed-name {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.feed-challenge {
+  color: var(--text);
+}
+
+.feed-points {
+  color: var(--secondary);
+  font-weight: bold;
+}
+
+.feed-date {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.feed-new-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--mint);
+  text-shadow: 0 0 6px rgba(0, 232, 157, 0.5);
+  animation: blink-anim 1s step-end infinite;
+}
+
+.feed-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 0;
+  font-size: 12px;
+}
+
+/* =============================================
+   Rules
+   ============================================= */
+.rules-container {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.rules-block {
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 2px solid rgba(199, 125, 255, 0.15);
+  transition: border-color 0.2s;
+}
+
+.rules-block[open] {
+  border-color: var(--primary);
+}
+
+.rules-summary {
+  font-size: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  color: var(--primary);
+  letter-spacing: 1px;
+  list-style: none;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.rules-summary:hover {
+  color: var(--accent);
+}
+
+.rules-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rules-summary::before {
+  content: '> ';
+  color: var(--secondary);
+}
+
+details[open] .rules-summary::before {
+  content: 'v ';
+}
+
+.rules-content {
+  padding: 0 16px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+.rules-content p {
+  margin-bottom: 8px;
+}
+
+.rules-content strong {
+  color: var(--text);
+}
+
+/* =============================================
+   Footer
+   ============================================= */
+.footer {
+  text-align: center;
+  padding: 36px 16px;
+  font-size: 7px;
+  color: var(--text-dim);
+  border-top: 3px solid;
+  border-image: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--mint)) 1;
+  letter-spacing: 1px;
+  line-height: 2.5;
+}
+
+.footer-sub {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  color: var(--lilac);
+}
+
+/* =============================================
+   Confetti Canvas
+   ============================================= */
+#confetti-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* =============================================
+   Error State
+   ============================================= */
+.error-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--primary);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  line-height: 2;
+}
+
+.error-message p {
+  margin-bottom: 16px;
+}
+
+.error-hint {
+  color: var(--text-dim);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+}
+
+/* =============================================
+   Responsive - Desktop
+   ============================================= */
+@media (min-width: 600px) {
+  .hero-title {
+    font-size: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .challenge-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .podium-bar {
+    width: 120px;
+  }
+
+  .filter-tab {
+    font-size: 8px;
+    padding: 10px 14px;
+  }
+
+  .podium {
+    gap: 20px;
+  }
+}
+
+@media (min-width: 900px) {
+  .hero-title {
+    font-size: 38px;
+  }
+
+  .section {
+    padding: 48px 24px;
+  }
+
+  .challenge-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

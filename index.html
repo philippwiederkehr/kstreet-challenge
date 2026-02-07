@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KSTREET CHALLENGE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-text">LOADING DATA<span class="blink">...</span></div>
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill"></div>
+    </div>
+  </div>
+
+  <!-- Main Content (hidden until loaded) -->
+  <div id="app" class="app hidden">
+
+    <!-- Hero / Title Bar -->
+    <header class="hero">
+      <div class="scanline-overlay"></div>
+      <div class="hero-content">
+        <h1 class="hero-title">KSTREET<br>CHALLENGE</h1>
+        <p class="hero-subtitle">Kantstrasse 20</p>
+        <div class="countdown" id="countdown">
+          <span class="countdown-text blink" id="countdown-text">LOADING...</span>
+        </div>
+        <div class="xp-bar-container">
+          <div class="xp-bar-label">EVENT PROGRESS</div>
+          <div class="xp-bar-track">
+            <div class="xp-bar-fill" id="xp-bar-fill"></div>
+          </div>
+          <div class="xp-bar-dates">
+            <span>FEB 20</span>
+            <span>MAR 14</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="pixel-nav">
+      <a href="#leaderboard" class="nav-link">SCORES</a>
+      <a href="#challenges" class="nav-link">CHALLENGES</a>
+      <a href="#feed" class="nav-link">FEED</a>
+      <a href="#stats" class="nav-link">STATS</a>
+      <a href="#rules" class="nav-link">RULES</a>
+    </nav>
+
+    <!-- Stats Bar -->
+    <section class="stats-bar" id="stats">
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="stat-participants">0</div>
+          <div class="stat-label">PLAYERS</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-completions">0</div>
+          <div class="stat-label">COMPLETED</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-popular">-</div>
+          <div class="stat-label">MOST POPULAR</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-rate">0%</div>
+          <div class="stat-label">PARTICIPATION</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leaderboard -->
+    <section class="section" id="leaderboard">
+      <h2 class="section-title">LEADERBOARD</h2>
+
+      <!-- Top 3 Podium -->
+      <div class="podium" id="podium"></div>
+
+      <!-- Remaining Rankings -->
+      <div class="rankings-table" id="rankings-table"></div>
+    </section>
+
+    <!-- Challenge Browser -->
+    <section class="section" id="challenges">
+      <h2 class="section-title">CHALLENGES</h2>
+
+      <!-- Category Filter Tabs -->
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-category="all">ALL</button>
+        <button class="filter-tab" data-category="House Heros">HOUSE HEROS</button>
+        <button class="filter-tab" data-category="Kstreet Chemistry">CHEMISTRY</button>
+        <button class="filter-tab" data-category="Chaos Entertainment">CHAOS</button>
+        <button class="filter-tab" data-category="Unhinged Legends">UNHINGED</button>
+        <button class="filter-tab" data-category="Opening Night">OPENING NIGHT</button>
+      </div>
+
+      <!-- Challenge Cards Grid -->
+      <div class="challenge-grid" id="challenge-grid"></div>
+    </section>
+
+    <!-- Recent Completions Feed -->
+    <section class="section" id="feed">
+      <h2 class="section-title">RECENT COMPLETIONS</h2>
+      <div class="feed-list" id="feed-list"></div>
+    </section>
+
+    <!-- Rules (Collapsible) -->
+    <section class="section" id="rules">
+      <h2 class="section-title">RULES</h2>
+      <div class="rules-container">
+        <details class="rules-block">
+          <summary class="rules-summary">HOW IT WORKS</summary>
+          <div class="rules-content">
+            <p>The KStreet Challenge runs for <strong>3 weeks</strong> (Feb 20 &ndash; Mar 14, 2026). Complete challenges to earn points and climb the leaderboard!</p>
+            <p>There are <strong>39 challenges</strong> across 5 categories, each worth different point values. Some are easy, some are legendary.</p>
+          </div>
+        </details>
+        <details class="rules-block">
+          <summary class="rules-summary">HOW TO SUBMIT</summary>
+          <div class="rules-content">
+            <p>Completed a challenge? Send <strong>photo/video proof</strong> to the committee via the KStreet WhatsApp group.</p>
+            <p>The committee will verify and add your completion to the scoreboard. Points only count once confirmed.</p>
+          </div>
+        </details>
+        <details class="rules-block">
+          <summary class="rules-summary">SCORING</summary>
+          <div class="rules-content">
+            <p>Each challenge has a fixed point value. Complete as many as you want!</p>
+            <p>Multiple people can complete the same challenge &mdash; everyone gets the points.</p>
+            <p>Some challenges may have <strong>negative points</strong> (penalties). Choose wisely!</p>
+          </div>
+        </details>
+        <details class="rules-block">
+          <summary class="rules-summary">FAIR PLAY</summary>
+          <div class="rules-content">
+            <p>The committee&rsquo;s decision is final. Have fun, be creative, and don&rsquo;t be a jerk.</p>
+            <p>Challenges must be completed during the event period to count.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>KSTREET CHALLENGE 2026</p>
+      <p class="footer-sub">BUILT WITH PIXELS AND LOVE</p>
+    </footer>
+
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="script.js"></script>
+</body>
+</html>
