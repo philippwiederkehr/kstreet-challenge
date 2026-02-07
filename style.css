@@ -296,9 +296,9 @@ body {
 .pixel-nav {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 12px 8px;
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 10px 4px;
   background: rgba(30, 10, 60, 0.95);
   backdrop-filter: blur(8px);
   border-bottom: 2px solid rgba(255, 45, 120, 0.3);
@@ -308,12 +308,13 @@ body {
 }
 
 .nav-link {
-  font-size: 8px;
+  font-size: 7px;
   color: var(--text-dim);
   text-decoration: none;
-  padding: 8px 12px;
+  padding: 8px 8px;
   transition: all 0.2s;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -360,6 +361,11 @@ body {
   font-size: 14px;
   margin-bottom: 6px;
   word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .stat-label {
@@ -400,9 +406,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 14px;
+  gap: 8px;
   margin-bottom: 28px;
-  min-height: 220px;
+  min-height: 200px;
+  padding: 0 8px;
 }
 
 .podium-place {
@@ -437,7 +444,7 @@ body {
 }
 
 .podium-bar {
-  width: 90px;
+  width: 80px;
   border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
@@ -695,6 +702,7 @@ body {
 .feed-text {
   font-size: 12px;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .feed-name {
@@ -869,13 +877,25 @@ details[open] .rules-summary::before {
     width: 120px;
   }
 
+  .podium {
+    gap: 20px;
+    padding: 0;
+  }
+
   .filter-tab {
     font-size: 8px;
     padding: 10px 14px;
   }
 
-  .podium {
-    gap: 20px;
+  .nav-link {
+    font-size: 8px;
+    padding: 8px 12px;
+    letter-spacing: 1px;
+  }
+
+  .pixel-nav {
+    gap: 4px;
+    padding: 12px 8px;
   }
 }
 
@@ -890,5 +910,49 @@ details[open] .rules-summary::before {
 
   .challenge-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+  .hero-title {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  .nav-link {
+    font-size: 6px;
+    padding: 6px 5px;
+    letter-spacing: 0;
+  }
+
+  .stat-value {
+    font-size: 11px;
+  }
+
+  .stat-label {
+    font-size: 6px;
+  }
+
+  .podium-bar {
+    width: 65px;
+  }
+
+  .podium-name {
+    font-size: 7px;
+    max-width: 70px;
+  }
+
+  .podium-score {
+    font-size: 10px;
+  }
+
+  .filter-tab {
+    font-size: 6px;
+    padding: 6px 8px;
+  }
+
+  .section-title {
+    font-size: 12px;
   }
 }
