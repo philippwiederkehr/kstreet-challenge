@@ -204,38 +204,55 @@ function splitCSVLines(text) {
 }
 
 // ── Normalize Challenges Sheet ─────────────────
-// The sheet uses grouped rows: category-only rows have just column A filled,
-// challenge rows have columns B-D filled. We flatten into uniform objects.
+// The Google Sheet CSV has quirky headers due to merged cells.
+// Column keys may have trailing spaces or category names baked in.
+// We access by column index to be safe, then parse the grouped rows.
 function normalizeChallenges(raw) {
+  if (raw.length === 0) return [];
+
+  // Get the actual column keys from the first row (may have junk in them)
+  const sampleKeys = Object.keys(raw[0]);
+  // Columns are in order: [type/category, name, description, points, ...]
+  const colType = sampleKeys[0];
+  const colName = sampleKeys[1];
+  const colDesc = sampleKeys[2];
+  const colPts  = sampleKeys[3];
+
+  // Known categories to detect category-header rows vs subtitle rows
+  const CATEGORIES = [
+    'House Heros', 'Kstreet Chemistry', 'Chaos Entertainment',
+    'Unhinged Legends', 'Opening Night Shenanigans'
+  ];
+
   const challenges = [];
+  // The first header may contain the first category (e.g. "challenge type House Heros")
   let currentCategory = '';
+  for (const cat of CATEGORIES) {
+    if (colType && colType.toLowerCase().includes(cat.toLowerCase())) {
+      currentCategory = cat;
+      break;
+    }
+  }
 
   raw.forEach(row => {
-    const type = (row['challenge type'] || '').trim();
-    const name = (row['challenge name'] || '').trim();
-    const desc = (row['challenge description'] || '').trim();
-    const pts  = (row['points'] || '').toString().trim();
+    const type = (row[colType] || '').trim();
+    const name = (row[colName] || '').trim();
+    const desc = (row[colDesc] || '').trim();
+    const pts  = (row[colPts]  || '').toString().trim();
 
-    // Category header row: has type but no challenge name
-    if (type && !name) {
-      currentCategory = type;
-      return;
+    // Check if this row is a known category header
+    const matchedCat = CATEGORIES.find(c => c.toLowerCase() === type.toLowerCase());
+    if (matchedCat) {
+      currentCategory = matchedCat;
+      if (!name) return; // Pure category row, skip
     }
 
-    // Subtitle row (e.g. "for the common good of Kstreet") with a challenge
-    if (type && name) {
-      // The type column has a subtitle, not a new category - keep current category
-      // But if currentCategory is empty, use type as category
-      if (!currentCategory) currentCategory = type;
-    }
-
-    // Skip empty rows
+    // Skip subtitle-only rows and empty rows
     if (!name) return;
 
-    // Parse points - handle special values like "200/275/350" or "Up to 400" or "?"
+    // Parse points - handle "200/275/350", "Up to 400", "?", empty
     let points = parseFloat(pts);
     if (isNaN(points)) {
-      // Take first number from strings like "200/275/350"
       const match = pts.match(/-?\d+/);
       points = match ? parseFloat(match[0]) : 0;
     }
