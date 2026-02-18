@@ -234,14 +234,17 @@ function normalizeChallenges(raw) {
     }
   }
 
-  raw.forEach(row => {
-    const type = (row[colType] || '').trim();
-    const name = (row[colName] || '').trim();
-    const desc = (row[colDesc] || '').trim();
-    const pts  = (row[colPts]  || '').toString().trim();
+  // Normalize a cell value: collapse non-breaking spaces and trim
+  const norm = s => (s || '').replace(/[\u00a0\s]+/g, ' ').trim();
 
-    // Check if this row is a known category header
-    const matchedCat = CATEGORIES.find(c => c.toLowerCase() === type.toLowerCase());
+  raw.forEach(row => {
+    const type = norm(row[colType]);
+    const name = norm(row[colName]);
+    const desc = norm(row[colDesc]);
+    const pts  = norm(row[colPts] != null ? String(row[colPts]) : '');
+
+    // Check if this row is a known category header (flexible: type contains category name)
+    const matchedCat = CATEGORIES.find(c => type.toLowerCase().includes(c.toLowerCase()));
     if (matchedCat) {
       currentCategory = matchedCat;
       if (!name) return; // Pure category row, skip

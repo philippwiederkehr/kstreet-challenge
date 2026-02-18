@@ -778,12 +778,7 @@ body {
 .rules-block {
   margin-bottom: 8px;
   background: var(--bg-card);
-  border: 2px solid rgba(199, 125, 255, 0.15);
-  transition: border-color 0.2s;
-}
-
-.rules-block[open] {
-  border-color: var(--primary);
+  border: 2px solid var(--primary);
 }
 
 .rules-summary {
@@ -815,7 +810,7 @@ details[open] .rules-summary::before {
 }
 
 .rules-content {
-  padding: 0 16px 16px;
+  padding: 16px;
   font-size: 12px;
   color: var(--text-dim);
   line-height: 1.7;
@@ -827,6 +822,15 @@ details[open] .rules-summary::before {
 
 .rules-content strong {
   color: var(--text);
+}
+
+.rules-list {
+  padding-left: 20px;
+  margin-top: 12px;
+}
+
+.rules-list li {
+  margin-bottom: 10px;
 }
 
 /* =============================================
