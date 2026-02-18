@@ -33,7 +33,7 @@ async function init() {
     ]);
 
     challengesData = normalizeChallenges(challenges).filter(c => c['Category'] !== 'Opening Night Shenanigans');
-    completionsData = completions.filter(r => r['Confirmed'] && r['Confirmed'].toUpperCase() === 'YES');
+    completionsData = completions;
 
     renderAll();
     showApp();
@@ -253,18 +253,11 @@ function normalizeChallenges(raw) {
     // Skip subtitle-only rows and empty rows
     if (!name) return;
 
-    // Parse points - handle "200/275/350", "Up to 400", "?", empty
-    let points = parseFloat(pts);
-    if (isNaN(points)) {
-      const match = pts.match(/-?\d+/);
-      points = match ? parseFloat(match[0]) : 0;
-    }
-
     challenges.push({
       'Category': currentCategory,
       'Challenge Name': name,
       'Description': desc,
-      'Points': points
+      'Points': pts
     });
   });
 
@@ -386,22 +379,32 @@ function renderChallenges(challenges, completionCounts) {
     return;
   }
 
+  const CATEGORY_ORDER = ['Chaos Entertainment', 'Kstreet Chemistry', 'House Heroes', 'Unhinged Legends'];
+  const sorted = [...challenges].sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(a['Category']);
+    const bi = CATEGORY_ORDER.indexOf(b['Category']);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
   let html = '';
-  challenges.forEach(ch => {
+  sorted.forEach(ch => {
     const cat = (ch['Category'] || '').trim();
     const name = (ch['Challenge Name'] || '').trim();
     const desc = (ch['Description'] || '').trim();
-    const points = parseFloat(ch['Points']) || 0;
+    const ptsRaw = (ch['Points'] || '').trim();
+    const isNegative = ptsRaw.startsWith('-');
+    const isPlainPositive = /^\d+$/.test(ptsRaw);
+    const pointsDisplay = isPlainPositive ? `+${ptsRaw}` : (ptsRaw || '?');
     const count = completionCounts[name] || 0;
     const catClass = categoryToClass(cat);
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
-    const pointsClass = points < 0 ? ' negative' : '';
+    const pointsClass = isNegative ? ' negative' : '';
 
     html += `
       <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}">
         <div class="challenge-card-header">
           <span class="challenge-name">${escapeHTML(name)}</span>
-          <span class="challenge-points${pointsClass}">${points > 0 ? '+' : ''}${points}</span>
+          <span class="challenge-points${pointsClass}">${escapeHTML(pointsDisplay)}</span>
         </div>
         <span class="challenge-category-tag ${catTagClass}">${escapeHTML(cat)}</span>
         <div class="challenge-desc">${escapeHTML(desc)}</div>
