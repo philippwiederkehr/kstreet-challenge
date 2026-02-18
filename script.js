@@ -436,7 +436,8 @@ function renderFeed(completions) {
     const points = parseFloat(row['Points']) || 0;
     const date = (row['Date'] || '').trim();
     const rowDate = parseDate(date);
-    const isNew = (now - rowDate.getTime()) < dayMs;
+    const timeDiff = now - rowDate.getTime();
+    const isNew = timeDiff >= 0 && timeDiff < dayMs;
     const pointSign = points >= 0 ? '+' : '';
 
     html += `
@@ -711,15 +712,19 @@ function categoryToClass(category) {
 
 function parseDate(str) {
   if (!str) return new Date(0);
-  // Handle YYYY-MM-DD or DD/MM/YYYY or other formats
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) return d;
-  // Try DD.MM.YYYY (common Swiss format)
-  const parts = str.split(/[./-]/);
+  const s = str.trim();
+  // Only use Date constructor for unambiguous ISO format (YYYY-MM-DD)
+  // Avoids JS interpreting "5/2/2026" as May 2 (US format) instead of Feb 5 (European)
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
+  }
+  // European format: DD.MM.YYYY or DD/MM/YYYY (day first)
+  const parts = s.split(/[./-]/);
   if (parts.length === 3) {
     const [a, b, c] = parts.map(Number);
-    if (a > 31) return new Date(a, b - 1, c); // YYYY-MM-DD
-    if (c > 31) return new Date(c, b - 1, a); // DD.MM.YYYY
+    if (a > 31) return new Date(a, b - 1, c); // YYYY-MM-DD (year first)
+    if (c > 31) return new Date(c, b - 1, a); // DD/MM/YYYY or DD.MM.YYYY
   }
   return new Date(0);
 }
