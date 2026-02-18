@@ -32,7 +32,7 @@ async function init() {
       fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
     ]);
 
-    challengesData = normalizeChallenges(challenges);
+    challengesData = normalizeChallenges(challenges).filter(c => c['Category'] !== 'Opening Night Shenanigans');
     completionsData = completions.filter(r => r['Confirmed'] && r['Confirmed'].toUpperCase() === 'YES');
 
     renderAll();
@@ -220,7 +220,7 @@ function normalizeChallenges(raw) {
 
   // Known categories to detect category-header rows vs subtitle rows
   const CATEGORIES = [
-    'House Heros', 'Kstreet Chemistry', 'Chaos Entertainment',
+    'Chaos Entertainment', 'Kstreet Chemistry', 'House Heroes',
     'Unhinged Legends', 'Opening Night Shenanigans'
   ];
 
@@ -701,7 +701,7 @@ function escapeAttr(str) {
 
 function categoryToClass(category) {
   const map = {
-    'House Heros': 'cat-house-heros',
+    'House Heroes': 'cat-house-heros',
     'Kstreet Chemistry': 'cat-kstreet-chemistry',
     'Chaos Entertainment': 'cat-chaos-entertainment',
     'Unhinged Legends': 'cat-unhinged-legends',
