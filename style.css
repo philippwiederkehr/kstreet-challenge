@@ -697,6 +697,73 @@ body {
   margin: 0 auto;
 }
 
+.feed-controls {
+  max-width: 500px;
+  margin: 0 auto 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.feed-search-input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 2px solid rgba(199, 125, 255, 0.25);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.feed-search-input::placeholder {
+  color: rgba(160, 144, 204, 0.85);
+}
+
+.feed-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+}
+
+.feed-toggle-btn {
+  border: 2px solid rgba(199, 125, 255, 0.25);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 12px 10px;
+  min-height: 40px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, opacity 0.2s;
+}
+
+.feed-toggle-btn:hover {
+  border-color: var(--primary);
+  background: rgba(255, 45, 120, 0.1);
+  transform: translateY(-1px);
+}
+
+.feed-toggle-btn[aria-pressed="true"] {
+  border-color: var(--mint);
+  color: var(--mint);
+  box-shadow: 0 0 10px rgba(0, 232, 157, 0.2);
+}
+
+.feed-toggle-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.feed-meta {
+  max-width: 500px;
+  margin: 0 auto 12px;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.2px;
+}
+
 .feed-item {
   display: flex;
   align-items: flex-start;
@@ -933,6 +1000,16 @@ details[open] .rules-summary::before {
   .filter-tab {
     font-size: 8px;
     padding: 10px 14px;
+  }
+
+  .feed-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .feed-toggle-btn {
+    min-width: 182px;
   }
 }
 

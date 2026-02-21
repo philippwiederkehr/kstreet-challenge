@@ -10,18 +10,24 @@ const CONFIG = {
   START_DATE: '2026-02-20',
   END_DATE: '2026-03-14',
   CACHE_MINUTES: 5,
-  TOTAL_RESIDENTS: 42
+  TOTAL_RESIDENTS: 42,
+  FEED_RECENT_LIMIT: 10
 };
 
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
+const feedState = {
+  query: '',
+  showAll: false
+};
 
 // ── Initialization ─────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setupFilterTabs();
+  setupFeedControls();
   setupKonamiCode();
   updateCountdown();
   setInterval(updateCountdown, 60000);
@@ -417,18 +423,63 @@ function renderChallenges(challenges, completionCounts) {
 
 function renderFeed(completions) {
   const feedList = document.getElementById('feed-list');
+  const feedMeta = document.getElementById('feed-meta');
+  const feedToggleBtn = document.getElementById('feed-toggle-btn');
+  if (!feedList) return;
 
-  // Sort by date descending, take latest 10
+  // Sort by date descending
   const sorted = [...completions]
     .sort((a, b) => {
       const da = parseDate(a['Date']);
       const db = parseDate(b['Date']);
       return db - da;
-    })
-    .slice(0, 10);
+    });
 
-  if (sorted.length === 0) {
-    feedList.innerHTML = '<div class="feed-empty">NO COMPLETIONS YET - GET STARTED!</div>';
+  const query = feedState.query;
+  const filtered = query
+    ? sorted.filter(row => {
+        const name = (row['Name'] || '').trim();
+        const challenge = (row['Challenge'] || '').trim();
+        const date = (row['Date'] || '').trim();
+        const points = String(parseFloat(row['Points']) || 0);
+        const searchable = `${name} ${challenge} ${date} ${points}`.toLowerCase();
+        return searchable.includes(query);
+      })
+    : sorted;
+
+  const isSearchMode = query.length > 0;
+  const showAllRows = feedState.showAll || isSearchMode;
+  const visibleRows = showAllRows ? filtered : filtered.slice(0, CONFIG.FEED_RECENT_LIMIT);
+
+  if (feedToggleBtn) {
+    const hasMoreThanRecent = sorted.length > CONFIG.FEED_RECENT_LIMIT;
+    if (isSearchMode) {
+      feedToggleBtn.textContent = 'SEARCHING FULL HISTORY';
+      feedToggleBtn.disabled = true;
+      feedToggleBtn.setAttribute('aria-pressed', 'true');
+    } else {
+      feedToggleBtn.textContent = feedState.showAll ? 'SHOW RECENT ONLY' : 'SHOW FULL HISTORY';
+      feedToggleBtn.disabled = !hasMoreThanRecent && !feedState.showAll;
+      feedToggleBtn.setAttribute('aria-pressed', String(feedState.showAll));
+    }
+  }
+
+  if (feedMeta) {
+    if (sorted.length === 0) {
+      feedMeta.textContent = '';
+    } else if (isSearchMode) {
+      feedMeta.textContent = `Showing ${visibleRows.length} of ${filtered.length} matches in full history`;
+    } else if (feedState.showAll) {
+      feedMeta.textContent = `Showing all ${visibleRows.length} completions`;
+    } else {
+      feedMeta.textContent = `Showing recent ${visibleRows.length} of ${sorted.length} completions`;
+    }
+  }
+
+  if (visibleRows.length === 0) {
+    feedList.innerHTML = isSearchMode
+      ? '<div class="feed-empty">NO MATCHES FOUND - TRY A DIFFERENT SEARCH</div>'
+      : '<div class="feed-empty">NO COMPLETIONS YET - GET STARTED!</div>';
     return;
   }
 
@@ -436,7 +487,7 @@ function renderFeed(completions) {
   const dayMs = 24 * 60 * 60 * 1000;
 
   let html = '';
-  sorted.forEach(row => {
+  visibleRows.forEach(row => {
     const name = (row['Name'] || '').trim();
     const challenge = (row['Challenge'] || '').trim();
     const points = parseFloat(row['Points']) || 0;
@@ -533,6 +584,25 @@ function setupFilterTabs() {
       filterByCategory(tab.dataset.category);
     });
   });
+}
+
+function setupFeedControls() {
+  const feedSearch = document.getElementById('feed-search');
+  const feedToggleBtn = document.getElementById('feed-toggle-btn');
+
+  if (feedSearch) {
+    feedSearch.addEventListener('input', () => {
+      feedState.query = feedSearch.value.trim().toLowerCase();
+      renderFeed(completionsData);
+    });
+  }
+
+  if (feedToggleBtn) {
+    feedToggleBtn.addEventListener('click', () => {
+      feedState.showAll = !feedState.showAll;
+      renderFeed(completionsData);
+    });
+  }
 }
 
 function filterByCategory(category) {

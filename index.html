@@ -107,6 +107,20 @@
     <!-- Recent Completions Feed -->
     <section class="section" id="feed">
       <h2 class="section-title">RECENT COMPLETIONS</h2>
+      <div class="feed-controls">
+        <input
+          type="search"
+          id="feed-search"
+          class="feed-search-input"
+          placeholder="Search name, challenge, or date..."
+          aria-label="Search completions"
+          autocomplete="off"
+        >
+        <button type="button" id="feed-toggle-btn" class="feed-toggle-btn" aria-pressed="false">
+          SHOW FULL HISTORY
+        </button>
+      </div>
+      <div class="feed-meta" id="feed-meta"></div>
       <div class="feed-list" id="feed-list"></div>
     </section>
 
