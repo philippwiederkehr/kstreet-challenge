@@ -62,11 +62,21 @@ async function fetchSheetCSV(sheetName) {
   // Check localStorage cache
   const cached = localStorage.getItem(cacheKey);
   const cachedTime = localStorage.getItem(cacheTimeKey);
-  if (cached && cachedTime) {
-    const age = (Date.now() - parseInt(cachedTime, 10)) / 60000;
-    if (age < CONFIG.CACHE_MINUTES) {
+  const cacheValid = cached && cachedTime;
+  const cacheAge = cacheValid ? (Date.now() - parseInt(cachedTime, 10)) / 60000 : Infinity;
+
+  // If cache is fresh, use it
+  if (cacheValid && cacheAge < CONFIG.CACHE_MINUTES) {
+    return JSON.parse(cached);
+  }
+
+  // If offline, serve stale cache or throw
+  if (!navigator.onLine) {
+    if (cacheValid) {
+      showOfflineBanner();
       return JSON.parse(cached);
     }
+    throw new Error('No internet connection and no cached data available');
   }
 
   const url = getSheetURL(sheetName);
@@ -785,6 +795,45 @@ function categoryToClass(category) {
   };
   return map[category] || '';
 }
+
+// ── Offline Banner ─────────────────────────────
+function showOfflineBanner() {
+  if (document.getElementById('offline-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'offline-banner';
+  banner.textContent = "YOU'RE OFFLINE \u2014 SHOWING CACHED DATA";
+  Object.assign(banner.style, {
+    position: 'fixed',
+    bottom: '0',
+    left: '0',
+    right: '0',
+    zIndex: '9998',
+    padding: '10px 16px',
+    background: 'linear-gradient(90deg, #ff2d78, #c77dff)',
+    color: '#fff',
+    fontFamily: "'Press Start 2P', monospace",
+    fontSize: '7px',
+    textAlign: 'center',
+    letterSpacing: '1px',
+    lineHeight: '1.8'
+  });
+  document.body.appendChild(banner);
+}
+
+function hideOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.remove();
+}
+
+window.addEventListener('online', () => {
+  hideOfflineBanner();
+  // Auto-refresh data when back online
+  init();
+});
+
+window.addEventListener('offline', () => {
+  showOfflineBanner();
+});
 
 function parseDate(str) {
   if (!str) return new Date(0);
