@@ -66,7 +66,9 @@ body {
 .podium-score,
 .rank-number,
 .footer,
-.rules-summary {
+.rules-summary,
+.pwa-install-btn,
+.pwa-install-text {
   font-family: 'Press Start 2P', monospace;
 }
 
@@ -920,6 +922,97 @@ details[open] .rules-summary::before {
   color: var(--lilac);
 }
 
+/* --- PWA Install Prompt --- */
+.pwa-install-prompt {
+  background: var(--bg-card);
+  border: 2px solid rgba(199, 125, 255, 0.25);
+  padding: 14px 16px;
+  margin: 0 auto 20px;
+  max-width: 500px;
+  transition: opacity 0.3s;
+}
+
+.pwa-install-prompt.fade-out {
+  opacity: 0;
+}
+
+.pwa-install-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pwa-install-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.pwa-install-text {
+  font-size: 7px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-btn {
+  font-size: 7px;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  cursor: pointer;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.pwa-install-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.pwa-install-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.pwa-install-dismiss:hover {
+  color: var(--text);
+}
+
+.pwa-ios-instructions {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+.pwa-ios-instructions strong {
+  color: var(--accent);
+}
+
+.pwa-share-icon {
+  vertical-align: middle;
+  color: var(--accent);
+}
+
+@media (display-mode: standalone) {
+  .pwa-install-prompt {
+    display: none !important;
+  }
+}
+
 /* =============================================
    Confetti Canvas
    ============================================= */
@@ -1011,6 +1104,14 @@ details[open] .rules-summary::before {
   .feed-toggle-btn {
     min-width: 182px;
   }
+
+  .pwa-install-text {
+    font-size: 8px;
+  }
+
+  .pwa-install-btn {
+    font-size: 8px;
+  }
 }
 
 @media (min-width: 900px) {
@@ -1068,5 +1169,14 @@ details[open] .rules-summary::before {
 
   .section-title {
     font-size: 12px;
+  }
+
+  .pwa-install-text {
+    font-size: 6px;
+  }
+
+  .pwa-install-btn {
+    font-size: 6px;
+    padding: 7px 10px;
   }
 }

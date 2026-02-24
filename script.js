@@ -835,6 +835,82 @@ window.addEventListener('offline', () => {
   showOfflineBanner();
 });
 
+// ── PWA Install Prompt ────────────────────────
+(function initPwaInstall() {
+  // Already running as installed PWA — bail out
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+
+  // User previously dismissed — bail out
+  if (localStorage.getItem('kstreet_pwa_install_dismissed')) return;
+
+  var prompt = document.getElementById('pwa-install-prompt');
+  var btn = document.getElementById('pwa-install-btn');
+  var dismiss = document.getElementById('pwa-install-dismiss');
+  var iosInstructions = document.getElementById('pwa-ios-instructions');
+  if (!prompt || !btn) return;
+
+  var deferredPrompt = null;
+  var isIOS = false;
+
+  // Detect iOS Safari (not Chrome/Firefox on iOS — those can't install PWAs)
+  var ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)) {
+    isIOS = true;
+  }
+
+  function show() {
+    prompt.classList.remove('hidden');
+  }
+
+  function hide() {
+    prompt.classList.add('fade-out');
+    setTimeout(function() {
+      prompt.classList.add('hidden');
+      prompt.classList.remove('fade-out');
+    }, 300);
+  }
+
+  // Chromium browsers: capture the native install event
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    btn.textContent = 'INSTALL';
+    show();
+  });
+
+  // iOS Safari: show instructions button
+  if (isIOS) {
+    btn.textContent = 'HOW TO';
+    show();
+  }
+
+  // Button click
+  btn.addEventListener('click', function() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(result) {
+        if (result.outcome === 'accepted') hide();
+        deferredPrompt = null;
+      });
+    } else if (isIOS && iosInstructions) {
+      iosInstructions.classList.toggle('hidden');
+    }
+  });
+
+  // Dismiss
+  if (dismiss) {
+    dismiss.addEventListener('click', function() {
+      localStorage.setItem('kstreet_pwa_install_dismissed', '1');
+      hide();
+    });
+  }
+
+  // Hide if the app gets installed while page is open
+  window.addEventListener('appinstalled', function() {
+    hide();
+  });
+})();
+
 function parseDate(str) {
   if (!str) return new Date(0);
   const s = str.trim();
