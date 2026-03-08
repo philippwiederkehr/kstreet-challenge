@@ -260,6 +260,7 @@ body {
   animation: xp-gradient 3s linear infinite;
   transition: width 1s ease-out;
   position: relative;
+  z-index: 2;
 }
 
 @keyframes xp-gradient {
@@ -286,10 +287,59 @@ body {
 .xp-bar-dates {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-top: 4px;
   font-size: 8px;
   color: var(--text-dim);
   font-family: 'Press Start 2P', monospace;
+}
+
+.xp-date-extended {
+  display: inline-block;
+  position: relative;
+  padding: 5px 8px 4px;
+  color: #1b0a34;
+  background: linear-gradient(90deg, var(--secondary), #fff1a8, var(--mint));
+  box-shadow:
+    var(--pixel) 0 0 0 rgba(255, 255, 255, 0.85),
+    calc(-1 * var(--pixel)) 0 0 0 rgba(255, 255, 255, 0.85),
+    0 var(--pixel) 0 0 rgba(255, 255, 255, 0.85),
+    0 calc(-1 * var(--pixel)) 0 0 rgba(255, 255, 255, 0.85),
+    0 0 16px rgba(255, 184, 0, 0.4);
+  animation: deadline-ticket-bob 2.4s ease-in-out infinite;
+}
+
+.xp-date-extended::before,
+.xp-date-extended::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  transform: rotate(45deg);
+  animation: deadline-sparkle 1.6s ease-in-out infinite;
+}
+
+.xp-date-extended::before {
+  top: -5px;
+  right: 10px;
+}
+
+.xp-date-extended::after {
+  bottom: -4px;
+  left: 9px;
+  animation-delay: 0.8s;
+}
+
+@keyframes deadline-ticket-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.03); }
+}
+
+@keyframes deadline-sparkle {
+  0%, 100% { opacity: 0.35; transform: rotate(45deg) scale(0.8); }
+  50% { opacity: 1; transform: rotate(45deg) scale(1.15); }
 }
 
 /* =============================================
@@ -1112,6 +1162,10 @@ details[open] .rules-summary::before {
   .pwa-install-btn {
     font-size: 8px;
   }
+
+  .xp-date-extended {
+    padding: 5px 9px 4px;
+  }
 }
 
 @media (min-width: 900px) {
@@ -1160,6 +1214,10 @@ details[open] .rules-summary::before {
 
   .podium-score {
     font-size: 10px;
+  }
+
+  .xp-date-extended {
+    padding: 4px 5px 3px;
   }
 
   .filter-tab {
