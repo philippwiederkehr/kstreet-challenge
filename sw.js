@@ -1,12 +1,12 @@
 // KSTREET CHALLENGE - Service Worker
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const CACHE_NAME = `kstreet-${CACHE_VERSION}`;
 
 // App shell files to pre-cache on install
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/style.css?v=9',
+  '/style.css?v=10',
   '/script.js?v=10',
   '/favicon.svg',
   '/icons/icon-192.png',

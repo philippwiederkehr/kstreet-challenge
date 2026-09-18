@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -59,12 +59,24 @@
       <a href="#leaderboard" class="nav-link">SCORES</a>
       <a href="#challenges" class="nav-link">CHALLENGES</a>
       <a href="#feed" class="nav-link">FEED</a>
-      <a href="#stats" class="nav-link">STATS</a>
+      <a href="#stats" class="nav-link">OVERVIEW</a>
       <a href="#rules" class="nav-link">RULES</a>
     </nav>
 
-    <!-- Stats Bar -->
-    <section class="stats-bar" id="stats">
+    <!-- Leaderboard -->
+    <section class="section" id="leaderboard">
+      <h2 class="section-title">LEADERBOARD</h2>
+
+      <!-- Top 3 Podium -->
+      <div class="podium" id="podium"></div>
+
+      <!-- Remaining Rankings -->
+      <div class="rankings-table" id="rankings-table"></div>
+    </section>
+
+    <!-- Event Snapshot -->
+    <section class="stats-bar" id="stats" aria-labelledby="stats-heading">
+      <div class="section-kicker stats-kicker" id="stats-heading">EVENT SNAPSHOT</div>
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-value" id="stat-participants">0</div>
@@ -83,17 +95,6 @@
           <div class="stat-label">PARTICIPATION</div>
         </div>
       </div>
-    </section>
-
-    <!-- Leaderboard -->
-    <section class="section" id="leaderboard">
-      <h2 class="section-title">LEADERBOARD</h2>
-
-      <!-- Top 3 Podium -->
-      <div class="podium" id="podium"></div>
-
-      <!-- Remaining Rankings -->
-      <div class="rankings-table" id="rankings-table"></div>
     </section>
 
     <!-- Player Avatar Editor -->

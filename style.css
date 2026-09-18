@@ -1364,6 +1364,7 @@ body {
 .stats-bar {
   padding: 18px 16px;
   background: rgba(8, 4, 18, 0.34);
+  scroll-margin-top: 64px;
 }
 
 .stats-grid {
