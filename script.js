@@ -16,8 +16,8 @@ const CONFIG = {
   FEED_RECENT_LIMIT: 10
 };
 
-// Week missions are available for seven days from their published kickoff.
-// End dates are exclusive so a new week's missions appear without overlap.
+// Week missions are available until the next published kickoff.
+// End dates are exclusive so adjacent weeks never overlap.
 const WEEK_WINDOWS = {
   'week 1': { start: '2026-09-19', end: '2026-09-25' },
   'week 2': { start: '2026-09-25', end: '2026-10-02' },
@@ -46,6 +46,9 @@ let completionsData = [];
 let avatarProfiles = {};
 let activeAvatarName = '';
 let avatarDraft = { ...AVATAR_DEFAULTS };
+let avatarReturnFocus = null;
+let hasRenderedData = false;
+let refreshInFlight = null;
 const challengeState = {
   filter: 'all',
   query: '',
@@ -57,9 +60,9 @@ const feedState = {
 };
 
 // ── Initialization ─────────────────────────────
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', startApp);
 
-async function init() {
+function startApp() {
   setupChallengeSearch();
   setupChallengeSort();
   setupFeedControls();
@@ -67,27 +70,44 @@ async function init() {
   setupAvatarEditor();
   setupKonamiCode();
   updateCountdown();
-  setInterval(updateCountdown, 60000);
-  setInterval(() => renderChallenges(challengesData, getCompletionCounts(completionsData)), 60000);
+  window.setInterval(updateCountdown, 60000);
+  window.setInterval(() => renderChallenges(challengesData, getCompletionCounts(completionsData)), 60000);
+  refreshData();
+}
 
-  try {
-    const [challenges, completions] = await Promise.all([
-      fetchSheetCSV(CONFIG.CHALLENGES_SHEET),
-      fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
-    ]);
+async function refreshData() {
+  if (refreshInFlight) return refreshInFlight;
 
-    challengesData = normalizeChallenges(challenges);
-    completionsData = normalizeCompletions(completions);
+  refreshInFlight = (async () => {
+    try {
+      const [challenges, completions] = await Promise.all([
+        fetchSheetCSV(CONFIG.CHALLENGES_SHEET),
+        fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
+      ]);
 
-    renderFilterTabs(challengesData);
-    setupFilterTabs();
-    renderAll();
-    showApp();
-    checkConfetti();
-  } catch (err) {
-    console.error('Failed to load data:', err);
-    showError(err.message);
-  }
+      challengesData = normalizeChallenges(challenges);
+      completionsData = normalizeCompletions(completions);
+
+      clearError();
+      renderFilterTabs(challengesData);
+      setupFilterTabs();
+      renderAll();
+      showApp();
+      hasRenderedData = true;
+      checkConfetti();
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      if (hasRenderedData) {
+        showOfflineBanner();
+      } else {
+        showError(err.message);
+      }
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
 }
 
 // ── Google Sheets CSV Fetch ────────────────────
@@ -99,89 +119,74 @@ async function fetchSheetCSV(sheetName) {
   const cacheKey = `${CONFIG.CACHE_NAMESPACE}_${sheetName}`;
   const cacheTimeKey = `${CONFIG.CACHE_NAMESPACE}_${sheetName}_time`;
 
-  // Check localStorage cache
-  const cached = localStorage.getItem(cacheKey);
-  const cachedTime = localStorage.getItem(cacheTimeKey);
-  const cacheValid = cached && cachedTime;
-  const cacheAge = cacheValid ? (Date.now() - parseInt(cachedTime, 10)) / 60000 : Infinity;
+  const cachedData = readCachedSheet(cacheKey, cacheTimeKey);
+  const cacheAge = cachedData ? (Date.now() - cachedData.timestamp) / 60000 : Infinity;
 
   // If cache is fresh, use it
-  if (cacheValid && cacheAge < CONFIG.CACHE_MINUTES) {
-    return JSON.parse(cached);
+  if (cachedData && cacheAge < CONFIG.CACHE_MINUTES) {
+    return cachedData.rows;
   }
 
   // If offline, serve stale cache or throw
   if (!navigator.onLine) {
-    if (cacheValid) {
+    if (cachedData) {
       showOfflineBanner();
-      return JSON.parse(cached);
+      return cachedData.rows;
     }
     throw new Error('No internet connection and no cached data available');
   }
 
   const url = getSheetURL(sheetName);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${sheetName} (HTTP ${response.status})`);
-  }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${sheetName} (HTTP ${response.status})`);
+    }
 
-  const text = await response.text();
-  if (!text.trim()) {
-    localStorage.setItem(cacheKey, JSON.stringify([]));
+    const text = await response.text();
+    const rows = text.trim() ? parseCSV(text) : [];
+    writeCachedSheet(cacheKey, cacheTimeKey, rows);
+    return rows;
+  } catch (err) {
+    if (cachedData) {
+      showOfflineBanner();
+      return cachedData.rows;
+    }
+    throw err;
+  }
+}
+
+function readCachedSheet(cacheKey, cacheTimeKey) {
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    const cachedTime = Number.parseInt(localStorage.getItem(cacheTimeKey), 10);
+    if (!cached || !Number.isFinite(cachedTime)) return null;
+
+    const rows = JSON.parse(cached);
+    if (!Array.isArray(rows)) throw new Error('Cached sheet data is not an array');
+    return { rows, timestamp: cachedTime };
+  } catch {
+    try {
+      localStorage.removeItem(cacheKey);
+      localStorage.removeItem(cacheTimeKey);
+    } catch {
+      // Storage may be unavailable or read-only; the network path can still work.
+    }
+    return null;
+  }
+}
+
+function writeCachedSheet(cacheKey, cacheTimeKey, rows) {
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(rows));
     localStorage.setItem(cacheTimeKey, String(Date.now()));
-    return [];
+  } catch {
+    // A full or blocked cache must not prevent fresh sheet data from rendering.
   }
-  const rows = parseCSV(text);
-
-  // Cache
-  localStorage.setItem(cacheKey, JSON.stringify(rows));
-  localStorage.setItem(cacheTimeKey, String(Date.now()));
-
-  return rows;
 }
 
 // ── Robust CSV Parser ──────────────────────────
 function parseCSV(text) {
-  const lines = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (i + 1 < text.length && text[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        current += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === '\n' || ch === '\r') {
-        if (current.length > 0 || lines.length > 0) {
-          lines.push(current);
-          current = '';
-        }
-        if (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-          i++;
-        }
-      } else {
-        current += ch;
-      }
-    }
-  }
-  if (current.length > 0) {
-    lines.push(current);
-  }
-
-  if (lines.length === 0) return [];
-
-  // Parse each line into fields
   const parseLine = (line) => {
     const fields = [];
     let field = '';
@@ -214,8 +219,6 @@ function parseCSV(text) {
     return fields;
   };
 
-  // First line reassembled from raw text may have issues;
-  // Re-parse from the raw text properly
   const rawLines = splitCSVLines(text);
   if (rawLines.length === 0) return [];
 
@@ -275,7 +278,10 @@ function normalizeChallenges(raw) {
   const columns = {
     name: keyFor(['name', 'challenge name', 'mission', 'mission name']),
     description: keyFor(['description', 'challenge description', 'mission description']),
-    points: keyFor(['points', 'points adjusted', 'score']),
+    points: [
+      keyFor(['points adjusted', 'adjusted points']),
+      keyFor(['points', 'score'])
+    ],
     when: keyFor(['when', 'date', 'week']),
     type: keyFor(['type', 'mission type']),
     category: keyFor(['category', 'challenge category'])
@@ -285,7 +291,7 @@ function normalizeChallenges(raw) {
     'Category': normalizeValue(row[columns.category]),
     'Challenge Name': normalizeValue(row[columns.name]),
     'Description': normalizeValue(row[columns.description]),
-    'Points': normalizeValue(row[columns.points]),
+    'Points': firstNonEmptyValue(row, columns.points),
     'When': normalizeValue(row[columns.when]),
     'Type': normalizeValue(row[columns.type])
   })).filter(challenge => {
@@ -311,7 +317,9 @@ function normalizeCompletions(raw) {
     Name: normalizeValue(row[columns.name]),
     Challenge: normalizeValue(row[columns.challenge]),
     Points: normalizeValue(row[columns.points])
-  })).filter(row => row.Name || row.Challenge || row.Date || row.Points);
+  })).filter(row => {
+    return row.Name && row.Challenge && Number.isFinite(parsePoints(row.Points));
+  });
 }
 
 function normalizeHeader(value) {
@@ -336,13 +344,23 @@ function normalizeValue(value) {
   return String(value == null ? '' : value).replace(/[\u00a0\s]+/g, ' ').trim();
 }
 
+function firstNonEmptyValue(row, keys) {
+  return keys.map(key => normalizeValue(key ? row[key] : '')).find(Boolean) || '';
+}
+
+function parsePoints(value) {
+  const normalized = normalizeValue(value).replace(',', '.');
+  const match = normalized.match(/^-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : Number.NaN;
+}
+
 // ── Data Processing ────────────────────────────
 function buildLeaderboard(completions) {
   const scores = {};
 
   completions.forEach(row => {
     const name = (row['Name'] || '').trim();
-    const points = parseFloat(row['Points']) || 0;
+    const points = parsePoints(row['Points']);
     if (!name) return;
     scores[name] = (scores[name] || 0) + points;
   });
@@ -381,7 +399,7 @@ function isChallengeActive(challenge, now = new Date()) {
   if (!when || when === 'always' || when === 'open') return true;
 
   const window = WEEK_WINDOWS[when];
-  if (!window) return true;
+  if (!window) return !when.startsWith('week');
 
   const start = new Date(`${window.start}T00:00:00`);
   const end = new Date(`${window.end}T00:00:00`);
@@ -492,9 +510,11 @@ function renderChallenges(challenges, completionCounts) {
     const name = (ch['Challenge Name'] || '').trim();
     const desc = (ch['Description'] || '').trim();
     const ptsRaw = (ch['Points'] || '').trim();
-    const isNegative = ptsRaw.startsWith('-');
-    const isPlainPositive = /^\d+$/.test(ptsRaw);
-    const pointsDisplay = isPlainPositive ? `+${ptsRaw}` : (ptsRaw || 'TBD');
+    const numericPoints = parsePoints(ptsRaw);
+    const isNegative = Number.isFinite(numericPoints) && numericPoints < 0;
+    const pointsDisplay = Number.isFinite(numericPoints)
+      ? `${numericPoints > 0 ? '+' : ''}${numericPoints}`
+      : 'TBD';
     const count = completionCounts[name] || 0;
     const displayTag = cat || type || 'OPEN MISSION';
     const catClass = categoryToClass(cat || type);
@@ -592,7 +612,7 @@ function renderFeed(completions) {
   visibleRows.forEach(row => {
     const name = (row['Name'] || '').trim();
     const challenge = (row['Challenge'] || '').trim();
-    const points = parseFloat(row['Points']) || 0;
+    const points = parsePoints(row['Points']);
     const date = (row['Date'] || '').trim();
     const rowDate = parseDate(date);
     const timeDiff = now - rowDate.getTime();
@@ -758,8 +778,26 @@ function setupAvatarEditor() {
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+    if (modal.classList.contains('hidden')) return;
+
+    if (event.key === 'Escape') {
       closeAvatarEditor();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const focusable = [...modal.querySelectorAll('button:not([disabled])')];
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   });
 
@@ -772,18 +810,22 @@ function setupAvatarEditor() {
 
   document.getElementById('avatar-save-btn')?.addEventListener('click', () => {
     if (!activeAvatarName) return;
+    const name = activeAvatarName;
     avatarProfiles[activeAvatarName] = normalizeAvatarProfile(avatarDraft);
     saveAvatarProfiles();
     closeAvatarEditor();
     renderAll();
+    focusAvatarTrigger(name);
   });
 
   document.getElementById('avatar-clear-btn')?.addEventListener('click', () => {
     if (!activeAvatarName) return;
+    const name = activeAvatarName;
     delete avatarProfiles[activeAvatarName];
     saveAvatarProfiles();
     closeAvatarEditor();
     renderAll();
+    focusAvatarTrigger(name);
   });
 }
 
@@ -791,6 +833,7 @@ function openAvatarEditor(name) {
   const modal = document.getElementById('avatar-modal');
   if (!modal || !name) return;
 
+  avatarReturnFocus = document.activeElement;
   activeAvatarName = name;
   avatarDraft = normalizeAvatarProfile(avatarProfiles[name]);
   const player = document.getElementById('avatar-editor-player');
@@ -807,6 +850,14 @@ function closeAvatarEditor() {
   modal.classList.add('hidden');
   document.body.classList.remove('avatar-editor-open');
   activeAvatarName = '';
+  avatarReturnFocus?.focus?.();
+  avatarReturnFocus = null;
+}
+
+function focusAvatarTrigger(name) {
+  const trigger = [...document.querySelectorAll('.avatar-trigger')]
+    .find(button => button.dataset.avatarName === name);
+  trigger?.focus();
 }
 
 function updateAvatarEditor() {
@@ -843,11 +894,20 @@ function renderFilterTabs(challenges) {
     'House Heroes': 'HOUSE HEROES',
     'Unhinged Legends': 'UNHINGED'
   };
+  const availableFilters = new Set([
+    'all',
+    ...categories,
+    ...types.map(type => `type:${type}`)
+  ]);
+  if (!availableFilters.has(challengeState.filter)) {
+    challengeState.filter = 'all';
+  }
+
   const tab = (value, label) => `
-    <button type="button" class="filter-tab" data-filter="${escapeAttr(value)}">${escapeHTML(label)}</button>`;
+    <button type="button" class="filter-tab${value === challengeState.filter ? ' active' : ''}" data-filter="${escapeAttr(value)}">${escapeHTML(label)}</button>`;
 
   tabs.innerHTML = [
-    '<button type="button" class="filter-tab active" data-filter="all">ALL</button>',
+    tab('all', 'ALL'),
     ...categories.map(category => tab(category, categoryLabels[category] || category.toUpperCase())),
     ...types.map(type => tab(`type:${type}`, type.replace(/\s+Mission$/i, '').toUpperCase()))
   ].join('');
@@ -893,8 +953,8 @@ function sortChallenges(challenges, completionCounts) {
     if (sortMode === 'name') return compareNames(a, b);
 
     if (sortMode === 'points-asc' || sortMode === 'points-desc') {
-      const aPoints = parseFloat(a['Points']);
-      const bPoints = parseFloat(b['Points']);
+      const aPoints = parsePoints(a['Points']);
+      const bPoints = parsePoints(b['Points']);
       const aUnknown = Number.isNaN(aPoints);
       const bUnknown = Number.isNaN(bPoints);
       if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
@@ -987,21 +1047,26 @@ function showError(message) {
   loading.style.display = 'none';
   app.classList.remove('hidden');
 
-  app.innerHTML = `
-    <header class="hero">
-      <div class="scanline-overlay"></div>
-      <div class="hero-content">
-        <h1 class="hero-title">KSTREET<br>CHALLENGE</h1>
-      </div>
-    </header>
-    <div class="error-message">
+  let error = document.getElementById('data-error');
+  if (!error) {
+    error = document.createElement('div');
+    error.id = 'data-error';
+    error.className = 'error-message';
+    app.prepend(error);
+  }
+
+  error.innerHTML = `
       <p>FAILED TO LOAD DATA</p>
       <p class="error-hint">${escapeHTML(message)}</p>
       <p class="error-hint" style="margin-top: 20px;">
         Make sure the Google Sheet is published to the web<br>
         and the SHEET_ID in script.js is correct.
       </p>
-    </div>`;
+    `;
+}
+
+function clearError() {
+  document.getElementById('data-error')?.remove();
 }
 
 // ── Confetti ───────────────────────────────────
@@ -1124,7 +1189,9 @@ function escapeHTML(str) {
 }
 
 function escapeAttr(str) {
-  return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return escapeHTML(String(str == null ? '' : str))
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function categoryToClass(category) {
@@ -1176,7 +1243,7 @@ function hideOfflineBanner() {
 window.addEventListener('online', () => {
   hideOfflineBanner();
   // Auto-refresh data when back online
-  init();
+  refreshData();
 });
 
 window.addEventListener('offline', () => {
@@ -1262,20 +1329,41 @@ window.addEventListener('offline', () => {
 function parseDate(str) {
   if (!str) return new Date(0);
   const s = str.trim();
-  // Only use Date constructor for unambiguous ISO format (YYYY-MM-DD)
-  // Avoids JS interpreting "5/2/2026" as May 2 (US format) instead of Feb 5 (European)
   if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) return d;
+    const [year, month, day] = s.split('-').map(Number);
+    return validDate(year, month, day);
   }
-  // European format: DD.MM.YYYY or DD/MM/YYYY (day first)
+
+  // ISO timestamps are unambiguous and preserve their time zone.
+  if (/^\d{4}-\d{1,2}-\d{1,2}T/.test(s)) {
+    const timestamp = new Date(s);
+    if (!Number.isNaN(timestamp.getTime())) return timestamp;
+  }
+
+  // Slash/dot/dash dates are normally day-first in the Swiss sheet. If the
+  // middle segment is greater than 12, accept the unambiguous US variant too.
   const parts = s.split(/[./-]/);
   if (parts.length === 3) {
     const [a, b, c] = parts.map(Number);
-    if (a > 31) return new Date(a, b - 1, c); // YYYY-MM-DD (year first)
-    if (c > 31) return new Date(c, b - 1, a); // DD/MM/YYYY or DD.MM.YYYY
+    if (Number.isInteger(a) && Number.isInteger(b) && Number.isInteger(c)) {
+      if (a > 31) return validDate(a, b, c);
+      if (c > 31) {
+        const day = b > 12 ? b : a;
+        const month = b > 12 ? a : b;
+        return validDate(c, month, day);
+      }
+    }
   }
   return new Date(0);
+}
+
+function validDate(year, month, day) {
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year
+    && date.getMonth() === month - 1
+    && date.getDate() === day
+    ? date
+    : new Date(0);
 }
 
 function formatDateLabel(isoDate) {
