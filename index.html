@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -47,8 +47,14 @@
             <div class="xp-bar-fill" id="xp-bar-fill"></div>
           </div>
           <div class="xp-bar-dates">
-            <span id="event-start-label">SEP 19</span>
-            <span class="xp-date-extended" id="event-end-label" aria-label="Finale date to be announced">FINALE TBC</span>
+            <span class="xp-start-marker">
+              <span class="xp-marker-dot" aria-hidden="true"></span>
+              <span id="event-start-label">SEP 19</span>
+            </span>
+            <span class="xp-finale-marker">
+              <span class="xp-finale-ribbon" aria-hidden="true"><span class="xp-finale-ribbon-star">✦</span> FINAL GATE</span>
+              <span class="xp-date-extended" id="event-end-label" aria-label="Finale date to be announced">FINALE TBC</span>
+            </span>
           </div>
         </div>
       </div>
@@ -242,7 +248,7 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=11"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

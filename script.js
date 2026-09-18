@@ -734,6 +734,13 @@ function updateCountdown() {
     xpFill.style.width = `${value}%`;
     xpTrack?.setAttribute('aria-valuenow', String(value));
     if (xpStatus) xpStatus.textContent = status;
+
+    const progressState = status === 'LOCKED'
+      ? 'locked'
+      : status === 'COMPLETE'
+        ? 'complete'
+        : 'live';
+    xpFill.closest('.xp-bar-container')?.setAttribute('data-progress-state', progressState);
   };
 
   if (startLabel) startLabel.textContent = formatDateLabel(CONFIG.START_DATE);
