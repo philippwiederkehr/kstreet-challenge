@@ -7,19 +7,26 @@ const CONFIG = {
   SHEET_ID: '195wQUuZLInuKr94VusgKgf1GhfoEKUelvvJOOC9-itE',
   CHALLENGES_SHEET: 'Missions V2.0',
   COMPLETIONS_SHEET: 'Pointtracking',
-  CALENDAR_SHEET: 'Kalender',
   START_DATE: '2026-09-19',
   END_DATE: null,
   END_DATE_LABEL: 'FINALE TBC',
+  CACHE_NAMESPACE: 'kstreet_v2',
   CACHE_MINUTES: 5,
   TOTAL_RESIDENTS: 42,
   FEED_RECENT_LIMIT: 10
 };
 
+// Week missions are available for seven days from their published kickoff.
+// End dates are exclusive so a new week's missions appear without overlap.
+const WEEK_WINDOWS = {
+  'week 1': { start: '2026-09-19', end: '2026-09-25' },
+  'week 2': { start: '2026-09-25', end: '2026-10-02' },
+  'week 3': { start: '2026-10-02', end: '2026-10-09' }
+};
+
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
-let calendarData = [];
 const challengeState = {
   filter: 'all',
   query: ''
@@ -39,20 +46,18 @@ async function init() {
   setupKonamiCode();
   updateCountdown();
   setInterval(updateCountdown, 60000);
+  setInterval(() => renderChallenges(challengesData, getCompletionCounts(completionsData)), 60000);
 
   try {
-    const [challenges, completions, calendar] = await Promise.all([
+    const [challenges, completions] = await Promise.all([
       fetchSheetCSV(CONFIG.CHALLENGES_SHEET),
-      fetchSheetCSV(CONFIG.COMPLETIONS_SHEET),
-      fetchSheetCSV(CONFIG.CALENDAR_SHEET)
+      fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
     ]);
 
     challengesData = normalizeChallenges(challenges);
     completionsData = normalizeCompletions(completions);
-    calendarData = calendar;
 
     renderAll();
-    renderSchedule(calendarData);
     showApp();
     checkConfetti();
   } catch (err) {
@@ -67,8 +72,8 @@ function getSheetURL(sheetName) {
 }
 
 async function fetchSheetCSV(sheetName) {
-  const cacheKey = `kstreet_${sheetName}`;
-  const cacheTimeKey = `kstreet_${sheetName}_time`;
+  const cacheKey = `${CONFIG.CACHE_NAMESPACE}_${sheetName}`;
+  const cacheTimeKey = `${CONFIG.CACHE_NAMESPACE}_${sheetName}_time`;
 
   // Check localStorage cache
   const cached = localStorage.getItem(cacheKey);
@@ -333,6 +338,22 @@ function getCompletionCounts(completions) {
   return counts;
 }
 
+function isChallengeActive(challenge, now = new Date()) {
+  const when = normalizeHeader(challenge['When']);
+  if (!when || when === 'always' || when === 'open') return true;
+
+  const window = WEEK_WINDOWS[when];
+  if (!window) return true;
+
+  const start = new Date(`${window.start}T00:00:00`);
+  const end = new Date(`${window.end}T00:00:00`);
+  return now >= start && now < end;
+}
+
+function isLimitedChallenge(challenge) {
+  return Boolean(WEEK_WINDOWS[normalizeHeader(challenge['When'])]);
+}
+
 // ── Rendering ──────────────────────────────────
 function renderAll() {
   const rankings = buildLeaderboard(completionsData);
@@ -348,7 +369,17 @@ function renderAll() {
 function renderPodium(rankings) {
   const podium = document.getElementById('podium');
   if (rankings.length === 0) {
-    podium.innerHTML = '<div class="feed-empty">NO SCORES YET — ADD A ROW IN POINTTRACKING.</div>';
+    podium.innerHTML = `
+      <div class="leaderboard-empty" role="status">
+        <div class="empty-arcade" aria-hidden="true">
+          <span class="empty-star star-a">✦</span>
+          <span class="empty-star star-b">✦</span>
+          <span class="empty-star star-c">✧</span>
+          <div class="empty-trophy">🏆</div>
+        </div>
+        <strong>THE PODIUM IS WAITING</strong>
+        <span>Add a completion to enter.</span>
+      </div>`;
     return;
   }
 
@@ -402,14 +433,19 @@ function renderRankings(rankings) {
 
 function renderChallenges(challenges, completionCounts) {
   const grid = document.getElementById('challenge-grid');
+  const activeChallenges = challenges.filter(challenge => isChallengeActive(challenge));
 
-  if (challenges.length === 0) {
-    grid.innerHTML = '<div class="feed-empty">NO CHALLENGES LOADED</div>';
+  if (activeChallenges.length === 0) {
+    grid.innerHTML = '<div class="feed-empty">NO MISSIONS LIVE RIGHT NOW</div>';
+    const meta = document.getElementById('challenge-meta');
+    const emptyState = document.getElementById('challenge-empty-state');
+    if (meta) meta.textContent = '0 missions shown';
+    if (emptyState) emptyState.classList.add('hidden');
     return;
   }
 
   const CATEGORY_ORDER = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
-  const sorted = [...challenges].sort((a, b) => {
+  const sorted = [...activeChallenges].sort((a, b) => {
     const ai = CATEGORY_ORDER.indexOf(a['Category']);
     const bi = CATEGORY_ORDER.indexOf(b['Category']);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
@@ -433,17 +469,19 @@ function renderChallenges(challenges, completionCounts) {
     const catClass = categoryToClass(cat || type);
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
     const pointsClass = isNegative ? ' negative' : '';
-    const scheduleLabel = when ? `<span class="challenge-when">${escapeHTML(when)}</span>` : '';
+    const limitedLabel = isLimitedChallenge(ch)
+      ? '<span class="challenge-limited" title="Available for a limited time">⌛ LIMITED</span>'
+      : '';
 
     html += `
-      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(type)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type} ${when}`.toLowerCase())}">
+      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(type)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type}`.toLowerCase())}">
         <div class="challenge-card-header">
           <span class="challenge-name">${escapeHTML(name)}</span>
           <span class="challenge-points${pointsClass}">${escapeHTML(pointsDisplay)}</span>
         </div>
         <div class="challenge-tags">
           <span class="challenge-category-tag ${catTagClass}">${escapeHTML(displayTag)}</span>
-          ${scheduleLabel}
+          ${limitedLabel}
         </div>
         <div class="challenge-desc">${escapeHTML(desc)}</div>
         <div class="challenge-completions">${count > 0 ? `<strong>${count}x</strong> completed` : 'Not yet completed'}</div>
@@ -452,47 +490,6 @@ function renderChallenges(challenges, completionCounts) {
 
   grid.innerHTML = html;
   applyChallengeFilters();
-}
-
-function renderSchedule(rows) {
-  const grid = document.getElementById('schedule-grid');
-  if (!grid) return;
-
-  const days = ['Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-  const cards = rows.map(row => {
-    const events = days.map(day => ({ day, value: normalizeValue(row[day]) }))
-      .filter(event => event.value);
-    return {
-      stage: normalizeValue(row.Stage) || 'Upcoming',
-      responsible: normalizeValue(row['Main Responsible Person']),
-      events
-    };
-  }).filter(stage => stage.events.length || stage.responsible);
-
-  if (!cards.length) {
-    grid.innerHTML = '<div class="schedule-empty">Schedule coming soon.</div>';
-    return;
-  }
-
-  grid.innerHTML = cards.map(stage => `
-    <article class="schedule-card">
-      <div class="schedule-card-top">
-        <span class="schedule-stage">${escapeHTML(stage.stage)}</span>
-        ${stage.responsible ? `<span class="schedule-owner">${escapeHTML(stage.responsible)}</span>` : ''}
-      </div>
-      <div class="schedule-events">
-        ${stage.events.map(event => {
-          const match = event.value.match(/^(\d{1,2}\.\d{1,2})\s*(.*)$/);
-          const date = match ? match[1] : '';
-          const title = match ? match[2] : event.value;
-          return `<div class="schedule-event">
-            <span class="schedule-day">${escapeHTML(event.day)}</span>
-            <span class="schedule-date">${escapeHTML(date)}</span>
-            <span class="schedule-title">${escapeHTML(title)}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </article>`).join('');
 }
 
 function renderFeed(completions) {
@@ -705,6 +702,7 @@ function filterByCategory(category) {
 
 function applyChallengeFilters() {
   const cards = document.querySelectorAll('.challenge-card');
+  const emptyState = document.getElementById('challenge-empty-state');
   let visible = 0;
 
   cards.forEach(card => {
@@ -721,6 +719,10 @@ function applyChallengeFilters() {
   const meta = document.getElementById('challenge-meta');
   if (meta) {
     meta.textContent = `${visible} mission${visible === 1 ? '' : 's'} shown`;
+  }
+  if (emptyState) {
+    emptyState.textContent = visible === 0 ? 'NO MATCHES — TRY A DIFFERENT FILTER.' : '';
+    emptyState.classList.toggle('hidden', visible !== 0);
   }
 }
 

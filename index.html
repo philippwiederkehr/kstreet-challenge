@@ -35,7 +35,6 @@
       <div class="hero-content">
         <p class="eyebrow">SEASON TWO · KANTSTRASSE 20</p>
         <h1 class="hero-title">KSTREET<br>CHALLENGE <span class="hero-version">V2.0</span></h1>
-        <p class="hero-subtitle">More missions. More chaos. Same house.</p>
         <div class="countdown" id="countdown">
           <span class="countdown-text blink" id="countdown-text">LOADING...</span>
         </div>
@@ -55,7 +54,6 @@
     <!-- Navigation -->
     <nav class="pixel-nav">
       <a href="#leaderboard" class="nav-link">SCORES</a>
-      <a href="#schedule" class="nav-link">SCHEDULE</a>
       <a href="#challenges" class="nav-link">CHALLENGES</a>
       <a href="#feed" class="nav-link">FEED</a>
       <a href="#stats" class="nav-link">STATS</a>
@@ -82,13 +80,6 @@
           <div class="stat-label">PARTICIPATION</div>
         </div>
       </div>
-    </section>
-
-    <!-- V2 Schedule -->
-    <section class="section schedule-section" id="schedule">
-      <div class="section-kicker">MARK YOUR CALENDAR</div>
-      <h2 class="section-title">V2.0 SCHEDULE</h2>
-      <div class="schedule-grid" id="schedule-grid"></div>
     </section>
 
     <!-- Leaderboard -->
@@ -131,6 +122,7 @@
 
       <!-- Challenge Cards Grid -->
       <div class="challenge-grid" id="challenge-grid"></div>
+      <div class="challenge-empty-state feed-empty hidden" id="challenge-empty-state" role="status"></div>
     </section>
 
     <!-- Recent Completions Feed -->
@@ -195,7 +187,7 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=3"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

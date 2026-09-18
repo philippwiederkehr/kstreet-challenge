@@ -1431,7 +1431,6 @@ body {
 }
 
 .rankings-table,
-.schedule-card,
 .challenge-card,
 .rules-block {
   border-radius: 16px;
@@ -1457,77 +1456,6 @@ body {
 
 .rank-score {
   font-size: 0.95rem;
-}
-
-.schedule-section {
-  padding-top: 36px;
-}
-
-.schedule-grid {
-  display: grid;
-  gap: 14px;
-}
-
-.schedule-card {
-  padding: 18px;
-  background: linear-gradient(145deg, rgba(45, 26, 80, 0.94), rgba(26, 15, 51, 0.96));
-  border: 1px solid rgba(98, 217, 255, 0.2);
-}
-
-.schedule-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.schedule-stage {
-  color: var(--secondary);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-}
-
-.schedule-owner {
-  color: var(--accent);
-  font-size: 0.85rem;
-  text-align: right;
-}
-
-.schedule-events {
-  display: grid;
-  gap: 9px;
-}
-
-.schedule-event {
-  display: grid;
-  grid-template-columns: 76px 58px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 8px;
-  padding: 9px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.schedule-day,
-.schedule-date {
-  color: var(--text-dim);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.schedule-date {
-  color: var(--coral);
-}
-
-.schedule-title {
-  color: var(--text);
-  font-weight: 750;
-}
-
-.schedule-empty {
-  color: var(--text-dim);
-  text-align: center;
 }
 
 .filter-tabs {
@@ -1615,7 +1543,7 @@ body {
 }
 
 .challenge-category-tag,
-.challenge-when {
+.challenge-limited {
   border-radius: 999px;
   padding: 4px 9px;
   margin: 0;
@@ -1625,10 +1553,82 @@ body {
   letter-spacing: 0.04em;
 }
 
-.challenge-when {
+.challenge-limited {
   color: var(--accent);
   background: rgba(98, 217, 255, 0.1);
   border: 1px solid rgba(98, 217, 255, 0.28);
+}
+
+.challenge-empty-state {
+  margin-top: 14px;
+  padding: 24px 12px;
+}
+
+.leaderboard-empty {
+  width: min(100%, 360px);
+  min-height: 190px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.leaderboard-empty strong {
+  color: var(--secondary);
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.62rem, 2.4vw, 0.8rem);
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 12px rgba(255, 184, 0, 0.35);
+}
+
+.leaderboard-empty > span {
+  font-size: 0.82rem;
+}
+
+.empty-arcade {
+  position: relative;
+  width: 116px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+}
+
+.empty-trophy {
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  border: 2px solid var(--secondary);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 184, 0, 0.2), rgba(255, 45, 120, 0.18));
+  box-shadow: 0 0 20px rgba(255, 184, 0, 0.25), inset 0 0 18px rgba(255, 184, 0, 0.14);
+  font-size: 2.15rem;
+  animation: trophy-float 2.4s ease-in-out infinite;
+}
+
+.empty-star {
+  position: absolute;
+  color: var(--accent);
+  font-size: 1.2rem;
+  animation: star-twinkle 1.8s ease-in-out infinite;
+}
+
+.star-a { top: 7px; left: 9px; }
+.star-b { top: 1px; right: 12px; color: var(--primary); animation-delay: 0.45s; }
+.star-c { bottom: 9px; right: 1px; color: var(--mint); animation-delay: 0.9s; }
+
+@keyframes trophy-float {
+  0%, 100% { transform: translateY(2px) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(18deg); }
 }
 
 .challenge-desc {
@@ -1708,10 +1708,6 @@ body {
 }
 
 @media (min-width: 600px) {
-  .schedule-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .challenge-controls {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -1743,27 +1739,11 @@ body {
     padding: 10px 12px;
   }
 
-  .schedule-card-top {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
+}
 
-  .schedule-owner {
-    text-align: left;
-  }
-
-  .schedule-event {
-    grid-template-columns: 64px 48px minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  .schedule-day,
-  .schedule-date {
-    font-size: 0.68rem;
-  }
-
-  .schedule-title {
-    font-size: 0.9rem;
+@media (prefers-reduced-motion: reduce) {
+  .empty-trophy,
+  .empty-star {
+    animation: none;
   }
 }
