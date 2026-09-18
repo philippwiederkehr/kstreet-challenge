@@ -40,7 +40,6 @@ const feedState = {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  setupFilterTabs();
   setupChallengeSearch();
   setupFeedControls();
   setupKonamiCode();
@@ -57,6 +56,8 @@ async function init() {
     challengesData = normalizeChallenges(challenges);
     completionsData = normalizeCompletions(completions);
 
+    renderFilterTabs(challengesData);
+    setupFilterTabs();
     renderAll();
     showApp();
     checkConfetti();
@@ -247,7 +248,7 @@ function normalizeChallenges(raw) {
   if (raw.length === 0) return [];
 
   const sampleKeys = Object.keys(raw[0]);
-  const keyFor = (names) => sampleKeys.find(key => names.includes(normalizeHeader(key)));
+  const keyFor = (names) => findColumnKey(sampleKeys, names);
   const columns = {
     name: keyFor(['name', 'challenge name', 'mission', 'mission name']),
     description: keyFor(['description', 'challenge description', 'mission description']),
@@ -274,7 +275,7 @@ function normalizeCompletions(raw) {
   if (raw.length === 0) return [];
 
   const sampleKeys = Object.keys(raw[0]);
-  const keyFor = (names) => sampleKeys.find(key => names.includes(normalizeHeader(key)));
+  const keyFor = (names) => findColumnKey(sampleKeys, names);
   const columns = {
     date: keyFor(['date', 'completed on', 'completion date']),
     name: keyFor(['name', 'person', 'participant', 'done by', 'completed by']),
@@ -292,6 +293,20 @@ function normalizeCompletions(raw) {
 
 function normalizeHeader(value) {
   return String(value || '').replace(/[\u00a0\s]+/g, ' ').trim().toLowerCase();
+}
+
+function findColumnKey(sampleKeys, names) {
+  const normalizedNames = names.map(normalizeHeader);
+  const exact = sampleKeys.find(key => normalizedNames.includes(normalizeHeader(key)));
+  if (exact) return exact;
+
+  // Google Sheets can export a header with a note or line break appended
+  // (for example: "Category ONLY REGULAR MISSION"). Match its real column
+  // name without depending on that extra cell text.
+  return sampleKeys.find(key => {
+    const normalizedKey = normalizeHeader(key);
+    return normalizedNames.some(name => normalizedKey.startsWith(`${name} `));
+  });
 }
 
 function normalizeValue(value) {
@@ -655,6 +670,36 @@ function updateCountdown() {
 }
 
 // ── Category Filtering ─────────────────────────
+function renderFilterTabs(challenges) {
+  const tabs = document.getElementById('filter-tabs');
+  if (!tabs) return;
+
+  const categoryOrder = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
+  const categories = [...new Set(challenges.map(challenge => challenge['Category']).filter(Boolean))]
+    .sort((a, b) => {
+      const ai = categoryOrder.indexOf(a);
+      const bi = categoryOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
+    });
+  const types = [...new Set(challenges.map(challenge => challenge['Type']).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+
+  const categoryLabels = {
+    'Chaos Entertainment': 'CHAOS',
+    'K-Street Chemistry': 'CHEMISTRY',
+    'House Heroes': 'HOUSE HEROES',
+    'Unhinged Legends': 'UNHINGED'
+  };
+  const tab = (value, label) => `
+    <button type="button" class="filter-tab" data-filter="${escapeAttr(value)}">${escapeHTML(label)}</button>`;
+
+  tabs.innerHTML = [
+    '<button type="button" class="filter-tab active" data-filter="all">ALL</button>',
+    ...categories.map(category => tab(category, categoryLabels[category] || category.toUpperCase())),
+    ...types.map(type => tab(`type:${type}`, type.replace(/\s+Mission$/i, '').toUpperCase()))
+  ].join('');
+}
+
 function setupFilterTabs() {
   const tabs = document.querySelectorAll('.filter-tab');
   tabs.forEach(tab => {

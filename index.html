@@ -99,13 +99,7 @@
 
       <!-- Category Filter Tabs -->
       <div class="filter-tabs" id="filter-tabs">
-        <button class="filter-tab active" data-filter="all">ALL</button>
-        <button class="filter-tab" data-filter="Chaos Entertainment">CHAOS</button>
-        <button class="filter-tab" data-filter="K-Street Chemistry">CHEMISTRY</button>
-        <button class="filter-tab" data-filter="House Heroes">HOUSE HEROES</button>
-        <button class="filter-tab" data-filter="Unhinged Legends">UNHINGED</button>
-        <button class="filter-tab" data-filter="type:Party">PARTY</button>
-        <button class="filter-tab" data-filter="type:Special Mission">SPECIAL</button>
+        <button type="button" class="filter-tab active" data-filter="all">ALL</button>
       </div>
 
       <div class="challenge-controls">
@@ -187,7 +181,7 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js?v=3"></script>
+  <script src="script.js?v=4"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
