@@ -1694,6 +1694,37 @@ body {
   outline: none;
 }
 
+.challenge-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  color: var(--text-dim);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.challenge-sort-select {
+  min-height: 42px;
+  max-width: 155px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(10, 5, 22, 0.68);
+  font: inherit;
+  font-size: 0.55rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.challenge-sort-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(98, 217, 255, 0.12);
+}
+
 .challenge-search-input:focus,
 .feed-search-input:focus {
   border-color: var(--accent);
@@ -1909,12 +1940,23 @@ body {
 
 @media (min-width: 600px) {
   .challenge-controls {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
   }
 
   .challenge-meta {
     text-align: right;
+  }
+}
+
+@media (max-width: 599px) {
+  .challenge-sort-control {
+    justify-content: space-between;
+  }
+
+  .challenge-sort-select {
+    flex: 1;
+    max-width: none;
   }
 }
 

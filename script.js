@@ -48,7 +48,8 @@ let activeAvatarName = '';
 let avatarDraft = { ...AVATAR_DEFAULTS };
 const challengeState = {
   filter: 'all',
-  query: ''
+  query: '',
+  sort: 'category'
 };
 const feedState = {
   query: '',
@@ -60,6 +61,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setupChallengeSearch();
+  setupChallengeSort();
   setupFeedControls();
   avatarProfiles = loadAvatarProfiles();
   setupAvatarEditor();
@@ -480,14 +482,7 @@ function renderChallenges(challenges, completionCounts) {
     return;
   }
 
-  const CATEGORY_ORDER = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
-  const sorted = [...activeChallenges].sort((a, b) => {
-    const ai = CATEGORY_ORDER.indexOf(a['Category']);
-    const bi = CATEGORY_ORDER.indexOf(b['Category']);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-      || (a['Type'] || '').localeCompare(b['Type'] || '')
-      || a['Challenge Name'].localeCompare(b['Challenge Name']);
-  });
+  const sorted = sortChallenges(activeChallenges, completionCounts);
 
   let html = '';
   sorted.forEach(ch => {
@@ -876,6 +871,50 @@ function setupChallengeSearch() {
   search.addEventListener('input', () => {
     challengeState.query = search.value.trim().toLowerCase();
     applyChallengeFilters();
+  });
+}
+
+function setupChallengeSort() {
+  const sort = document.getElementById('challenge-sort');
+  if (!sort) return;
+
+  sort.addEventListener('change', () => {
+    challengeState.sort = sort.value;
+    renderChallenges(challengesData, getCompletionCounts(completionsData));
+  });
+}
+
+function sortChallenges(challenges, completionCounts) {
+  const CATEGORY_ORDER = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
+  const sortMode = challengeState.sort;
+  const compareNames = (a, b) => (a['Challenge Name'] || '').localeCompare(b['Challenge Name'] || '');
+
+  return [...challenges].sort((a, b) => {
+    if (sortMode === 'name') return compareNames(a, b);
+
+    if (sortMode === 'points-asc' || sortMode === 'points-desc') {
+      const aPoints = parseFloat(a['Points']);
+      const bPoints = parseFloat(b['Points']);
+      const aUnknown = Number.isNaN(aPoints);
+      const bUnknown = Number.isNaN(bPoints);
+      if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
+      if (!aUnknown && aPoints !== bPoints) {
+        return sortMode === 'points-asc' ? aPoints - bPoints : bPoints - aPoints;
+      }
+      return compareNames(a, b);
+    }
+
+    if (sortMode === 'completions-desc') {
+      const aCount = completionCounts[a['Challenge Name']] || 0;
+      const bCount = completionCounts[b['Challenge Name']] || 0;
+      return bCount - aCount || compareNames(a, b);
+    }
+
+    const ai = CATEGORY_ORDER.indexOf(a['Category']);
+    const bi = CATEGORY_ORDER.indexOf(b['Category']);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+      || (a['Type'] || '').localeCompare(b['Type'] || '')
+      || compareNames(a, b);
   });
 }
 
