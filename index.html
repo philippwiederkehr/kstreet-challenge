@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -95,6 +95,53 @@
       <!-- Remaining Rankings -->
       <div class="rankings-table" id="rankings-table"></div>
     </section>
+
+    <!-- Player Avatar Editor -->
+    <div class="avatar-modal hidden" id="avatar-modal" role="dialog" aria-modal="true" aria-labelledby="avatar-editor-title">
+      <div class="avatar-dialog">
+        <button type="button" class="avatar-close" id="avatar-close" aria-label="Close avatar editor">&times;</button>
+        <div class="section-kicker">PLAYER CUSTOMIZER</div>
+        <h2 class="avatar-editor-title" id="avatar-editor-title">AVATAR LAB</h2>
+        <p class="avatar-editor-player" id="avatar-editor-player"></p>
+        <div class="avatar-preview" id="avatar-preview" aria-live="polite"></div>
+
+        <div class="avatar-choice-group">
+          <div class="avatar-choice-label">CHARACTER</div>
+          <div class="avatar-choice-grid" id="avatar-character-options">
+            <button type="button" class="avatar-choice" data-avatar-key="character" data-avatar-value="human" aria-label="Human">🙂<span>HUMAN</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="character" data-avatar-value="cat" aria-label="Cat">🐱<span>CAT</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="character" data-avatar-value="dog" aria-label="Dog">🐶<span>DOG</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="character" data-avatar-value="frog" aria-label="Frog">🐸<span>FROG</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="character" data-avatar-value="alien" aria-label="Alien">👽<span>ALIEN</span></button>
+          </div>
+        </div>
+
+        <div class="avatar-choice-group">
+          <div class="avatar-choice-label">MOOD</div>
+          <div class="avatar-choice-grid avatar-choice-grid-compact" id="avatar-mood-options">
+            <button type="button" class="avatar-choice" data-avatar-key="mood" data-avatar-value="happy" aria-label="Happy">✨<span>HAPPY</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="mood" data-avatar-value="cool" aria-label="Cool">🕶️<span>COOL</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="mood" data-avatar-value="silly" aria-label="Silly">😈<span>SILLY</span></button>
+            <button type="button" class="avatar-choice" data-avatar-key="mood" data-avatar-value="sleepy" aria-label="Sleepy">💤<span>SLEEPY</span></button>
+          </div>
+        </div>
+
+        <div class="avatar-choice-group">
+          <div class="avatar-choice-label">COLOR</div>
+          <div class="avatar-color-grid" id="avatar-color-options">
+            <button type="button" class="avatar-color-choice" data-avatar-key="theme" data-avatar-value="pink" aria-label="Pink"></button>
+            <button type="button" class="avatar-color-choice" data-avatar-key="theme" data-avatar-value="blue" aria-label="Blue"></button>
+            <button type="button" class="avatar-color-choice" data-avatar-key="theme" data-avatar-value="mint" aria-label="Mint"></button>
+            <button type="button" class="avatar-color-choice" data-avatar-key="theme" data-avatar-value="gold" aria-label="Gold"></button>
+          </div>
+        </div>
+
+        <div class="avatar-actions">
+          <button type="button" class="avatar-save-btn" id="avatar-save-btn">SAVE AVATAR</button>
+          <button type="button" class="avatar-clear-btn" id="avatar-clear-btn">CLEAR</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Challenge Browser -->
     <section class="section" id="challenges">
@@ -184,7 +231,7 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js?v=6"></script>
+  <script src="script.js?v=7"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

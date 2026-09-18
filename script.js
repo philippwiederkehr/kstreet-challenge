@@ -24,9 +24,28 @@ const WEEK_WINDOWS = {
   'week 3': { start: '2026-10-02', end: '2026-10-09' }
 };
 
+const AVATAR_STORAGE_KEY = 'kstreet_v2_avatars';
+const AVATAR_DEFAULTS = { character: 'human', mood: 'happy', theme: 'pink' };
+const AVATAR_CHARACTERS = {
+  human: '🙂',
+  cat: '🐱',
+  dog: '🐶',
+  frog: '🐸',
+  alien: '👽'
+};
+const AVATAR_MOODS = {
+  happy: '✨',
+  cool: '🕶️',
+  silly: '😈',
+  sleepy: '💤'
+};
+
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
+let avatarProfiles = {};
+let activeAvatarName = '';
+let avatarDraft = { ...AVATAR_DEFAULTS };
 const challengeState = {
   filter: 'all',
   query: ''
@@ -42,6 +61,8 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   setupChallengeSearch();
   setupFeedControls();
+  avatarProfiles = loadAvatarProfiles();
+  setupAvatarEditor();
   setupKonamiCode();
   updateCountdown();
   setInterval(updateCountdown, 60000);
@@ -411,7 +432,7 @@ function renderPodium(rankings) {
       html += `
         <div class="podium-place ${p.cls}" aria-label="${p.idx + 1}. place: ${escapeAttr(r.name)}, ${r.points} points">
           <div class="podium-crown" aria-hidden="true">${p.crown}</div>
-          <div class="podium-name">${escapeHTML(r.name)}</div>
+          ${avatarNameMarkup(r.name, 'podium-name')}
           <div class="podium-score"><strong>${r.points}</strong><span>PTS</span></div>
           <div class="podium-bar"><span class="podium-rank">${p.idx + 1}</span></div>
         </div>`;
@@ -438,7 +459,7 @@ function renderRankings(rankings) {
     html += `
       <div class="rank-row${zeroClass}">
         <span class="rank-number">${r.rank}.</span>
-        <span class="rank-name">${escapeHTML(r.name)}</span>
+        ${avatarNameMarkup(r.name, 'rank-name')}
         <span class="rank-score">${r.points}</span>
       </div>`;
   });
@@ -588,7 +609,7 @@ function renderFeed(completions) {
         <span class="feed-icon">\u{1F3AE}</span>
         <div class="feed-content">
           <div class="feed-text">
-            <span class="feed-name">${escapeHTML(name)}</span>
+            ${avatarNameMarkup(name, 'feed-name')}
             completed
             <span class="feed-challenge">${escapeHTML(challenge)}</span>
             <span class="feed-points">(${pointSign}${points} pts)</span>
@@ -675,6 +696,135 @@ function updateCountdown() {
     const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
     setProgress(progress, 'IN PROGRESS');
   }
+}
+
+// ── Player Avatars ──────────────────────────────
+function loadAvatarProfiles() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AVATAR_STORAGE_KEY) || '{}');
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeAvatarProfile(profile) {
+  const safeProfile = profile && typeof profile === 'object' ? profile : {};
+  return {
+    character: AVATAR_CHARACTERS[safeProfile.character] ? safeProfile.character : AVATAR_DEFAULTS.character,
+    mood: AVATAR_MOODS[safeProfile.mood] ? safeProfile.mood : AVATAR_DEFAULTS.mood,
+    theme: ['pink', 'blue', 'mint', 'gold'].includes(safeProfile.theme) ? safeProfile.theme : AVATAR_DEFAULTS.theme
+  };
+}
+
+function saveAvatarProfiles() {
+  try {
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(avatarProfiles));
+  } catch (err) {
+    console.warn('Could not save avatar:', err);
+  }
+}
+
+function avatarMarkup(profile) {
+  const safeProfile = normalizeAvatarProfile(profile);
+  return `
+    <span class="player-avatar avatar-theme-${safeProfile.theme}" aria-hidden="true">
+      <span class="avatar-character">${AVATAR_CHARACTERS[safeProfile.character]}</span>
+      <span class="avatar-mood">${AVATAR_MOODS[safeProfile.mood]}</span>
+    </span>`;
+}
+
+function avatarNameMarkup(name, className) {
+  if (!name) return `<span class="${escapeAttr(className)}"></span>`;
+  const profile = avatarProfiles[name];
+  const avatar = profile ? avatarMarkup(profile) : '';
+  return `
+    <button type="button" class="${escapeAttr(`${className} avatar-trigger`)}" data-avatar-name="${escapeAttr(name)}" aria-label="Customize avatar for ${escapeAttr(name)}">
+      ${avatar}
+      <span class="avatar-name-text">${escapeHTML(name)}</span>
+    </button>`;
+}
+
+function setupAvatarEditor() {
+  const modal = document.getElementById('avatar-modal');
+  if (!modal) return;
+
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('.avatar-trigger');
+    if (trigger) {
+      event.preventDefault();
+      openAvatarEditor(trigger.dataset.avatarName || '');
+      return;
+    }
+
+    if (event.target.closest('#avatar-close') || event.target === modal) {
+      closeAvatarEditor();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeAvatarEditor();
+    }
+  });
+
+  modal.querySelectorAll('[data-avatar-key]').forEach(option => {
+    option.addEventListener('click', () => {
+      avatarDraft[option.dataset.avatarKey] = option.dataset.avatarValue;
+      updateAvatarEditor();
+    });
+  });
+
+  document.getElementById('avatar-save-btn')?.addEventListener('click', () => {
+    if (!activeAvatarName) return;
+    avatarProfiles[activeAvatarName] = normalizeAvatarProfile(avatarDraft);
+    saveAvatarProfiles();
+    closeAvatarEditor();
+    renderAll();
+  });
+
+  document.getElementById('avatar-clear-btn')?.addEventListener('click', () => {
+    if (!activeAvatarName) return;
+    delete avatarProfiles[activeAvatarName];
+    saveAvatarProfiles();
+    closeAvatarEditor();
+    renderAll();
+  });
+}
+
+function openAvatarEditor(name) {
+  const modal = document.getElementById('avatar-modal');
+  if (!modal || !name) return;
+
+  activeAvatarName = name;
+  avatarDraft = normalizeAvatarProfile(avatarProfiles[name]);
+  const player = document.getElementById('avatar-editor-player');
+  if (player) player.textContent = name;
+  modal.classList.remove('hidden');
+  document.body.classList.add('avatar-editor-open');
+  updateAvatarEditor();
+  document.getElementById('avatar-close')?.focus();
+}
+
+function closeAvatarEditor() {
+  const modal = document.getElementById('avatar-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  document.body.classList.remove('avatar-editor-open');
+  activeAvatarName = '';
+}
+
+function updateAvatarEditor() {
+  const preview = document.getElementById('avatar-preview');
+  if (preview) {
+    preview.innerHTML = `${avatarMarkup(avatarDraft)}<span class="avatar-preview-hint">LOOKS GOOD?</span>`;
+  }
+
+  document.querySelectorAll('[data-avatar-key]').forEach(option => {
+    const isSelected = avatarDraft[option.dataset.avatarKey] === option.dataset.avatarValue;
+    option.classList.toggle('selected', isSelected);
+    option.setAttribute('aria-pressed', String(isSelected));
+  });
 }
 
 // ── Category Filtering ─────────────────────────
