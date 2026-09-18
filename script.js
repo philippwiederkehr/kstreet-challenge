@@ -4,11 +4,13 @@
 
 // ── Configuration ──────────────────────────────
 const CONFIG = {
-  SHEET_ID: '1JOHSDazm4loIgjV1CfLTwpV-MvY6CR-CKczUylTKvSU',
-  CHALLENGES_SHEET: 'Tabelle1',
-  COMPLETIONS_SHEET: 'Completions',
-  START_DATE: '2026-02-20',
-  END_DATE: '2026-03-22',
+  SHEET_ID: '195wQUuZLInuKr94VusgKgf1GhfoEKUelvvJOOC9-itE',
+  CHALLENGES_SHEET: 'Missions V2.0',
+  COMPLETIONS_SHEET: 'Pointtracking',
+  CALENDAR_SHEET: 'Kalender',
+  START_DATE: '2026-09-19',
+  END_DATE: null,
+  END_DATE_LABEL: 'FINALE TBC',
   CACHE_MINUTES: 5,
   TOTAL_RESIDENTS: 42,
   FEED_RECENT_LIMIT: 10
@@ -17,6 +19,11 @@ const CONFIG = {
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
+let calendarData = [];
+const challengeState = {
+  filter: 'all',
+  query: ''
+};
 const feedState = {
   query: '',
   showAll: false
@@ -27,21 +34,25 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setupFilterTabs();
+  setupChallengeSearch();
   setupFeedControls();
   setupKonamiCode();
   updateCountdown();
   setInterval(updateCountdown, 60000);
 
   try {
-    const [challenges, completions] = await Promise.all([
+    const [challenges, completions, calendar] = await Promise.all([
       fetchSheetCSV(CONFIG.CHALLENGES_SHEET),
-      fetchSheetCSV(CONFIG.COMPLETIONS_SHEET)
+      fetchSheetCSV(CONFIG.COMPLETIONS_SHEET),
+      fetchSheetCSV(CONFIG.CALENDAR_SHEET)
     ]);
 
-    challengesData = normalizeChallenges(challenges).filter(c => c['Category'] !== 'Opening Night Shenanigans');
-    completionsData = completions;
+    challengesData = normalizeChallenges(challenges);
+    completionsData = normalizeCompletions(completions);
+    calendarData = calendar;
 
     renderAll();
+    renderSchedule(calendarData);
     showApp();
     checkConfetti();
   } catch (err) {
@@ -86,6 +97,11 @@ async function fetchSheetCSV(sheetName) {
   }
 
   const text = await response.text();
+  if (!text.trim()) {
+    localStorage.setItem(cacheKey, JSON.stringify([]));
+    localStorage.setItem(cacheTimeKey, String(Date.now()));
+    return [];
+  }
   const rows = parseCSV(text);
 
   // Cache
@@ -219,65 +235,62 @@ function splitCSVLines(text) {
   return lines;
 }
 
-// ── Normalize Challenges Sheet ─────────────────
-// The Google Sheet CSV has quirky headers due to merged cells.
-// Column keys may have trailing spaces or category names baked in.
-// We access by column index to be safe, then parse the grouped rows.
+// ── Normalize V2 Sheets ────────────────────────
+// V2 uses explicit columns: Name, Description, Points, When, Type, Category.
+// Pointtracking intentionally starts empty, so an empty export is valid.
 function normalizeChallenges(raw) {
   if (raw.length === 0) return [];
 
-  // Get the actual column keys from the first row (may have junk in them)
   const sampleKeys = Object.keys(raw[0]);
-  // Columns are in order: [type/category, name, description, points, ...]
-  const colType = sampleKeys[0];
-  const colName = sampleKeys[1];
-  const colDesc = sampleKeys[2];
-  const colPts  = sampleKeys[3];
+  const keyFor = (names) => sampleKeys.find(key => names.includes(normalizeHeader(key)));
+  const columns = {
+    name: keyFor(['name', 'challenge name', 'mission', 'mission name']),
+    description: keyFor(['description', 'challenge description', 'mission description']),
+    points: keyFor(['points', 'points adjusted', 'score']),
+    when: keyFor(['when', 'date', 'week']),
+    type: keyFor(['type', 'mission type']),
+    category: keyFor(['category', 'challenge category'])
+  };
 
-  // Known categories to detect category-header rows vs subtitle rows
-  const CATEGORIES = [
-    'Chaos Entertainment', 'Kstreet Chemistry', 'House Heroes',
-    'Unhinged Legends', 'Opening Night Shenanigans'
-  ];
-
-  const challenges = [];
-  // The first header may contain the first category (e.g. "challenge type House Heros")
-  let currentCategory = '';
-  for (const cat of CATEGORIES) {
-    if (colType && colType.toLowerCase().includes(cat.toLowerCase())) {
-      currentCategory = cat;
-      break;
-    }
-  }
-
-  // Normalize a cell value: collapse non-breaking spaces and trim
-  const norm = s => (s || '').replace(/[\u00a0\s]+/g, ' ').trim();
-
-  raw.forEach(row => {
-    const type = norm(row[colType]);
-    const name = norm(row[colName]);
-    const desc = norm(row[colDesc]);
-    const pts  = norm(row[colPts] != null ? String(row[colPts]) : '');
-
-    // Check if this row is a known category header (flexible: type contains category name)
-    const matchedCat = CATEGORIES.find(c => type.toLowerCase().includes(c.toLowerCase()));
-    if (matchedCat) {
-      currentCategory = matchedCat;
-      if (!name) return; // Pure category row, skip
-    }
-
-    // Skip subtitle-only rows and empty rows
-    if (!name) return;
-
-    challenges.push({
-      'Category': currentCategory,
-      'Challenge Name': name,
-      'Description': desc,
-      'Points': pts
-    });
+  return raw.map(row => ({
+    'Category': normalizeValue(row[columns.category]),
+    'Challenge Name': normalizeValue(row[columns.name]),
+    'Description': normalizeValue(row[columns.description]),
+    'Points': normalizeValue(row[columns.points]),
+    'When': normalizeValue(row[columns.when]),
+    'Type': normalizeValue(row[columns.type])
+  })).filter(challenge => {
+    const name = challenge['Challenge Name'];
+    return name && !/^ONLY\s+/i.test(name);
   });
+}
 
-  return challenges;
+function normalizeCompletions(raw) {
+  if (raw.length === 0) return [];
+
+  const sampleKeys = Object.keys(raw[0]);
+  const keyFor = (names) => sampleKeys.find(key => names.includes(normalizeHeader(key)));
+  const columns = {
+    date: keyFor(['date', 'completed on', 'completion date']),
+    name: keyFor(['name', 'person', 'participant', 'done by', 'completed by']),
+    challenge: keyFor(['challenge', 'challenge name', 'mission', 'mission name']),
+    points: keyFor(['points', 'score'])
+  };
+
+  return raw.map(row => ({
+    Date: normalizeValue(row[columns.date]),
+    Name: normalizeValue(row[columns.name]),
+    Challenge: normalizeValue(row[columns.challenge]),
+    Points: normalizeValue(row[columns.points])
+  })).filter(row => row.Name || row.Challenge || row.Date || row.Points);
+}
+
+function normalizeHeader(value) {
+  return String(value || '').replace(/[\u00a0\s]+/g, ' ').trim().toLowerCase();
+}
+
+function normalizeValue(value) {
+  return String(value == null ? '' : value).replace(/[\u00a0\s]+/g, ' ').trim();
 }
 
 // ── Data Processing ────────────────────────────
@@ -335,7 +348,7 @@ function renderAll() {
 function renderPodium(rankings) {
   const podium = document.getElementById('podium');
   if (rankings.length === 0) {
-    podium.innerHTML = '<div class="feed-empty">NO SCORES YET - BE THE FIRST!</div>';
+    podium.innerHTML = '<div class="feed-empty">NO SCORES YET — ADD A ROW IN POINTTRACKING.</div>';
     return;
   }
 
@@ -395,40 +408,91 @@ function renderChallenges(challenges, completionCounts) {
     return;
   }
 
-  const CATEGORY_ORDER = ['Chaos Entertainment', 'Kstreet Chemistry', 'House Heroes', 'Unhinged Legends'];
+  const CATEGORY_ORDER = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
   const sorted = [...challenges].sort((a, b) => {
     const ai = CATEGORY_ORDER.indexOf(a['Category']);
     const bi = CATEGORY_ORDER.indexOf(b['Category']);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+      || (a['Type'] || '').localeCompare(b['Type'] || '')
+      || a['Challenge Name'].localeCompare(b['Challenge Name']);
   });
 
   let html = '';
   sorted.forEach(ch => {
     const cat = (ch['Category'] || '').trim();
+    const type = (ch['Type'] || '').trim();
+    const when = (ch['When'] || '').trim();
     const name = (ch['Challenge Name'] || '').trim();
     const desc = (ch['Description'] || '').trim();
     const ptsRaw = (ch['Points'] || '').trim();
     const isNegative = ptsRaw.startsWith('-');
     const isPlainPositive = /^\d+$/.test(ptsRaw);
-    const pointsDisplay = isPlainPositive ? `+${ptsRaw}` : (ptsRaw || '?');
+    const pointsDisplay = isPlainPositive ? `+${ptsRaw}` : (ptsRaw || 'TBD');
     const count = completionCounts[name] || 0;
-    const catClass = categoryToClass(cat);
+    const displayTag = cat || type || 'OPEN MISSION';
+    const catClass = categoryToClass(cat || type);
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
     const pointsClass = isNegative ? ' negative' : '';
+    const scheduleLabel = when ? `<span class="challenge-when">${escapeHTML(when)}</span>` : '';
 
     html += `
-      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}">
+      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(type)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type} ${when}`.toLowerCase())}">
         <div class="challenge-card-header">
           <span class="challenge-name">${escapeHTML(name)}</span>
           <span class="challenge-points${pointsClass}">${escapeHTML(pointsDisplay)}</span>
         </div>
-        <span class="challenge-category-tag ${catTagClass}">${escapeHTML(cat)}</span>
+        <div class="challenge-tags">
+          <span class="challenge-category-tag ${catTagClass}">${escapeHTML(displayTag)}</span>
+          ${scheduleLabel}
+        </div>
         <div class="challenge-desc">${escapeHTML(desc)}</div>
         <div class="challenge-completions">${count > 0 ? `<strong>${count}x</strong> completed` : 'Not yet completed'}</div>
       </div>`;
   });
 
   grid.innerHTML = html;
+  applyChallengeFilters();
+}
+
+function renderSchedule(rows) {
+  const grid = document.getElementById('schedule-grid');
+  if (!grid) return;
+
+  const days = ['Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  const cards = rows.map(row => {
+    const events = days.map(day => ({ day, value: normalizeValue(row[day]) }))
+      .filter(event => event.value);
+    return {
+      stage: normalizeValue(row.Stage) || 'Upcoming',
+      responsible: normalizeValue(row['Main Responsible Person']),
+      events
+    };
+  }).filter(stage => stage.events.length || stage.responsible);
+
+  if (!cards.length) {
+    grid.innerHTML = '<div class="schedule-empty">Schedule coming soon.</div>';
+    return;
+  }
+
+  grid.innerHTML = cards.map(stage => `
+    <article class="schedule-card">
+      <div class="schedule-card-top">
+        <span class="schedule-stage">${escapeHTML(stage.stage)}</span>
+        ${stage.responsible ? `<span class="schedule-owner">${escapeHTML(stage.responsible)}</span>` : ''}
+      </div>
+      <div class="schedule-events">
+        ${stage.events.map(event => {
+          const match = event.value.match(/^(\d{1,2}\.\d{1,2})\s*(.*)$/);
+          const date = match ? match[1] : '';
+          const title = match ? match[2] : event.value;
+          return `<div class="schedule-event">
+            <span class="schedule-day">${escapeHTML(event.day)}</span>
+            <span class="schedule-date">${escapeHTML(date)}</span>
+            <span class="schedule-title">${escapeHTML(title)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </article>`).join('');
 }
 
 function renderFeed(completions) {
@@ -489,7 +553,7 @@ function renderFeed(completions) {
   if (visibleRows.length === 0) {
     feedList.innerHTML = isSearchMode
       ? '<div class="feed-empty">NO MATCHES FOUND - TRY A DIFFERENT SEARCH</div>'
-      : '<div class="feed-empty">NO COMPLETIONS YET - GET STARTED!</div>';
+      : '<div class="feed-empty">NO COMPLETIONS YET — ADD A ROW IN POINTTRACKING.</div>';
     return;
   }
 
@@ -557,19 +621,28 @@ function renderStats(rankings, completionCounts) {
 function updateCountdown() {
   const now = new Date();
   const start = new Date(CONFIG.START_DATE + 'T00:00:00');
-  const end = new Date(CONFIG.END_DATE + 'T23:59:59');
+  const end = CONFIG.END_DATE ? new Date(CONFIG.END_DATE + 'T23:59:59') : null;
   const textEl = document.getElementById('countdown-text');
   const xpFill = document.getElementById('xp-bar-fill');
+  const startLabel = document.getElementById('event-start-label');
+  const endLabel = document.getElementById('event-end-label');
 
   if (!textEl || !xpFill) return;
 
+  if (startLabel) startLabel.textContent = formatDateLabel(CONFIG.START_DATE);
+  if (endLabel) endLabel.textContent = CONFIG.END_DATE ? formatDateLabel(CONFIG.END_DATE) : CONFIG.END_DATE_LABEL;
+
   if (now < start) {
     const days = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-    textEl.textContent = `STARTS IN ${days} DAY${days !== 1 ? 'S' : ''}`;
+    textEl.textContent = `KICKOFF IN ${days} DAY${days !== 1 ? 'S' : ''}`;
     textEl.className = 'countdown-text blink';
     xpFill.style.width = '0%';
-  } else if (now > end) {
+  } else if (end && now > end) {
     textEl.textContent = 'CHALLENGE ENDED';
+    textEl.className = 'countdown-text';
+    xpFill.style.width = '100%';
+  } else if (!end) {
+    textEl.textContent = 'V2.0 IS LIVE';
     textEl.className = 'countdown-text';
     xpFill.style.width = '100%';
   } else {
@@ -591,8 +664,18 @@ function setupFilterTabs() {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      filterByCategory(tab.dataset.category);
+      filterByCategory(tab.dataset.filter || tab.dataset.category || 'all');
     });
+  });
+}
+
+function setupChallengeSearch() {
+  const search = document.getElementById('challenge-search');
+  if (!search) return;
+
+  search.addEventListener('input', () => {
+    challengeState.query = search.value.trim().toLowerCase();
+    applyChallengeFilters();
   });
 }
 
@@ -616,14 +699,29 @@ function setupFeedControls() {
 }
 
 function filterByCategory(category) {
+  challengeState.filter = category;
+  applyChallengeFilters();
+}
+
+function applyChallengeFilters() {
   const cards = document.querySelectorAll('.challenge-card');
+  let visible = 0;
+
   cards.forEach(card => {
-    if (category === 'all' || card.dataset.category === category) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
+    const filter = challengeState.filter;
+    const matchesFilter = filter === 'all'
+      || (filter.startsWith('type:') && card.dataset.type === filter.slice(5))
+      || (!filter.startsWith('type:') && card.dataset.category === filter);
+    const matchesQuery = !challengeState.query || card.dataset.search.includes(challengeState.query);
+    const isVisible = matchesFilter && matchesQuery;
+    card.style.display = isVisible ? '' : 'none';
+    if (isVisible) visible++;
   });
+
+  const meta = document.getElementById('challenge-meta');
+  if (meta) {
+    meta.textContent = `${visible} mission${visible === 1 ? '' : 's'} shown`;
+  }
 }
 
 // ── Show/Hide App ──────────────────────────────
@@ -666,11 +764,11 @@ function showError(message) {
 function checkConfetti() {
   const now = new Date();
   const start = new Date(CONFIG.START_DATE + 'T00:00:00');
-  const end = new Date(CONFIG.END_DATE + 'T00:00:00');
+  const end = CONFIG.END_DATE ? new Date(CONFIG.END_DATE + 'T00:00:00') : null;
   const dayMs = 24 * 60 * 60 * 1000;
 
   const isFirstDay = now >= start && now < new Date(start.getTime() + dayMs);
-  const isLastDay = now >= end && now < new Date(end.getTime() + dayMs);
+  const isLastDay = end && now >= end && now < new Date(end.getTime() + dayMs);
 
   if (isFirstDay || isLastDay) {
     launchConfetti();
@@ -788,10 +886,16 @@ function escapeAttr(str) {
 function categoryToClass(category) {
   const map = {
     'House Heroes': 'cat-house-heros',
+    'K-Street Chemistry': 'cat-kstreet-chemistry',
     'Kstreet Chemistry': 'cat-kstreet-chemistry',
     'Chaos Entertainment': 'cat-chaos-entertainment',
     'Unhinged Legends': 'cat-unhinged-legends',
-    'Opening Night Shenanigans': 'cat-opening-night'
+    'Opening Night Shenanigans': 'cat-opening-night',
+    'Party': 'cat-opening-night',
+    'Special Mission': 'cat-special',
+    'Newbie Mission': 'cat-newbie',
+    'Faraway Mission': 'cat-faraway',
+    'Regular Mission': 'cat-regular'
   };
   return map[category] || '';
 }
@@ -928,4 +1032,10 @@ function parseDate(str) {
     if (c > 31) return new Date(c, b - 1, a); // DD/MM/YYYY or DD.MM.YYYY
   }
   return new Date(0);
+}
+
+function formatDateLabel(isoDate) {
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (isNaN(date.getTime())) return isoDate;
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
 }

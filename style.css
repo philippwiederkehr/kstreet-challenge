@@ -1238,3 +1238,532 @@ details[open] .rules-summary::before {
     padding: 7px 10px;
   }
 }
+
+/* =============================================
+   V2 refresh: clearer hierarchy + phone-first UI
+   ============================================= */
+:root {
+  --bg-main: #160d2b;
+  --bg-card: #21143e;
+  --bg-card-alt: #2d1a50;
+  --primary: #ff4f9a;
+  --secondary: #ffd166;
+  --accent: #62d9ff;
+  --mint: #65e6b4;
+  --coral: #ff8b70;
+  --lilac: #d7a4ff;
+  --text-dim: #bca9d5;
+}
+
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(255, 79, 154, 0.18), transparent 34rem),
+    radial-gradient(circle at 92% 16%, rgba(98, 217, 255, 0.14), transparent 30rem),
+    linear-gradient(180deg, #160d2b 0%, #100a20 100%);
+}
+
+.hero {
+  padding: clamp(42px, 9vw, 88px) 20px 46px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.hero-content {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.eyebrow,
+.section-kicker {
+  color: var(--accent);
+  font: 700 0.72rem/1.2 "Press Start 2P", monospace;
+  letter-spacing: 0.14em;
+  margin-bottom: 18px;
+}
+
+.hero-title {
+  max-width: 900px;
+  font-size: clamp(2.15rem, 8vw, 5.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  margin-bottom: 18px;
+}
+
+.hero-version {
+  display: block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  color: var(--secondary);
+  font-size: 0.34em;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.hero-subtitle {
+  color: var(--text-dim);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  letter-spacing: 0.02em;
+  margin-bottom: 28px;
+}
+
+.countdown {
+  margin-bottom: 30px;
+}
+
+.countdown-text {
+  color: var(--secondary);
+  font-size: clamp(0.78rem, 2.2vw, 1rem);
+  letter-spacing: 0.1em;
+}
+
+.xp-bar-container {
+  max-width: 680px;
+  margin: 0;
+}
+
+.xp-bar-label,
+.xp-bar-dates {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.xp-bar-track {
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+.xp-bar-fill {
+  border-radius: inherit;
+}
+
+.xp-date-extended {
+  border-radius: 999px;
+  padding: 5px 12px 4px;
+}
+
+.pixel-nav {
+  gap: 4px;
+  padding: 8px max(16px, calc((100vw - 1040px) / 2));
+  border-bottom: 1px solid rgba(255, 79, 154, 0.32);
+}
+
+.nav-link {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 11px 14px;
+}
+
+.stats-bar {
+  padding: 18px 16px;
+  background: rgba(8, 4, 18, 0.34);
+}
+
+.stats-grid {
+  max-width: 1040px;
+  gap: 12px;
+}
+
+.stat-box {
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 16px 12px;
+  background: linear-gradient(145deg, rgba(45, 26, 80, 0.96), rgba(25, 14, 49, 0.96));
+}
+
+.stat-value {
+  font-size: clamp(1rem, 3vw, 1.45rem);
+}
+
+.stat-label {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.section {
+  max-width: 1100px;
+  padding: clamp(42px, 7vw, 76px) 16px;
+}
+
+.section-title {
+  font-size: clamp(1.1rem, 4vw, 1.55rem);
+  letter-spacing: 0.09em;
+  margin-bottom: 26px;
+}
+
+.section-kicker {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 0.62rem;
+}
+
+.podium {
+  min-height: 220px;
+}
+
+.podium-name,
+.podium-score,
+.rank-number,
+.rank-score {
+  font-family: inherit;
+  font-weight: 800;
+}
+
+.podium-name {
+  font-size: 0.8rem;
+}
+
+.podium-score {
+  font-size: 1rem;
+}
+
+.rankings-table,
+.schedule-card,
+.challenge-card,
+.rules-block {
+  border-radius: 16px;
+}
+
+.rankings-table {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.rank-row {
+  min-height: 48px;
+  padding: 11px 16px;
+}
+
+.rank-number {
+  font-size: 0.8rem;
+}
+
+.rank-name {
+  font-size: 1rem;
+}
+
+.rank-score {
+  font-size: 0.95rem;
+}
+
+.schedule-section {
+  padding-top: 36px;
+}
+
+.schedule-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.schedule-card {
+  padding: 18px;
+  background: linear-gradient(145deg, rgba(45, 26, 80, 0.94), rgba(26, 15, 51, 0.96));
+  border: 1px solid rgba(98, 217, 255, 0.2);
+}
+
+.schedule-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.schedule-stage {
+  color: var(--secondary);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.schedule-owner {
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.schedule-events {
+  display: grid;
+  gap: 9px;
+}
+
+.schedule-event {
+  display: grid;
+  grid-template-columns: 76px 58px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.schedule-day,
+.schedule-date {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.schedule-date {
+  color: var(--coral);
+}
+
+.schedule-title {
+  color: var(--text);
+  font-weight: 750;
+}
+
+.schedule-empty {
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.filter-tabs {
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 2px 2px 8px;
+}
+
+.filter-tab {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 10px 15px;
+  min-height: 42px;
+}
+
+.challenge-controls {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.challenge-search-input,
+.feed-search-input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(10, 5, 22, 0.48);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.challenge-search-input:focus,
+.feed-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(98, 217, 255, 0.12);
+}
+
+.challenge-meta,
+.feed-meta {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.challenge-grid {
+  gap: 14px;
+}
+
+.challenge-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, rgba(45, 26, 80, 0.96), rgba(28, 16, 53, 0.98));
+}
+
+.challenge-card-header {
+  gap: 12px;
+  margin-bottom: 11px;
+}
+
+.challenge-name {
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.challenge-points {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--secondary);
+}
+
+.challenge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.challenge-category-tag,
+.challenge-when {
+  border-radius: 999px;
+  padding: 4px 9px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.challenge-when {
+  color: var(--accent);
+  background: rgba(98, 217, 255, 0.1);
+  border: 1px solid rgba(98, 217, 255, 0.28);
+}
+
+.challenge-desc {
+  min-height: 3.1em;
+  margin-bottom: 13px;
+  color: var(--text-dim);
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+.challenge-completions {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.challenge-completions strong {
+  color: var(--mint);
+}
+
+.cat-special { border-left: 4px solid var(--accent) !important; }
+.cat-newbie { border-left: 4px solid var(--mint) !important; }
+.cat-faraway { border-left: 4px solid var(--coral) !important; }
+.cat-regular { border-left: 4px solid var(--lilac) !important; }
+.cat-special .challenge-name { color: var(--accent); }
+.cat-newbie .challenge-name { color: var(--mint); }
+.cat-faraway .challenge-name { color: var(--coral); }
+.cat-regular .challenge-name { color: var(--lilac); }
+.cat-tag-special { background: rgba(98, 217, 255, 0.1); color: var(--accent); }
+.cat-tag-newbie { background: rgba(101, 230, 180, 0.1); color: var(--mint); }
+.cat-tag-faraway { background: rgba(255, 139, 112, 0.1); color: var(--coral); }
+.cat-tag-regular { background: rgba(215, 164, 255, 0.1); color: var(--lilac); }
+
+.feed-list {
+  max-width: none;
+}
+
+.feed-controls {
+  max-width: none;
+}
+
+.feed-toggle-btn {
+  min-height: 46px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.feed-item {
+  min-height: 62px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  background: rgba(45, 26, 80, 0.62);
+}
+
+.feed-text {
+  font-size: 0.95rem;
+}
+
+.feed-date {
+  font-size: 0.78rem;
+}
+
+.rules-block {
+  border: 1px solid rgba(255, 79, 154, 0.5);
+}
+
+.rules-content {
+  font-size: 0.98rem;
+}
+
+.footer {
+  font-family: inherit;
+  font-size: 0.72rem;
+}
+
+@media (min-width: 600px) {
+  .schedule-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .challenge-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .challenge-meta {
+    text-align: right;
+  }
+}
+
+@media (min-width: 900px) {
+  .challenge-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding-top: 36px;
+  }
+
+  .eyebrow {
+    font-size: 0.58rem;
+    line-height: 1.7;
+  }
+
+  .nav-link {
+    font-size: 0.7rem;
+    padding: 10px 12px;
+  }
+
+  .schedule-card-top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .schedule-owner {
+    text-align: left;
+  }
+
+  .schedule-event {
+    grid-template-columns: 64px 48px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .schedule-day,
+  .schedule-date {
+    font-size: 0.68rem;
+  }
+
+  .schedule-title {
+    font-size: 0.9rem;
+  }
+}

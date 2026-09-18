@@ -1,7 +1,7 @@
 {
-  "name": "KSTREET CHALLENGE",
-  "short_name": "KSTREET",
-  "description": "Kantstrasse 20 Challenge Leaderboard",
+  "name": "KSTREET CHALLENGE V2.0",
+  "short_name": "KSTREET V2",
+  "description": "Kantstrasse 20 Challenge V2.0 leaderboard and mission board",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e0a3c",
