@@ -8,6 +8,7 @@ const CONFIG = {
   CHALLENGES_SHEET: 'Missions V2.0',
   COMPLETIONS_SHEET: 'Pointtracking',
   START_DATE: '2026-09-19',
+  START_AT: '2026-09-19T19:00:00+02:00',
   END_DATE: null,
   END_DATE_LABEL: 'FINALE TBC',
   CACHE_NAMESPACE: 'kstreet_v2',
@@ -697,7 +698,7 @@ function renderStats(rankings, completionCounts) {
 // ── Countdown Timer ────────────────────────────
 function updateCountdown() {
   const now = new Date();
-  const start = new Date(CONFIG.START_DATE + 'T00:00:00');
+  const start = new Date(CONFIG.START_AT);
   const end = CONFIG.END_DATE ? new Date(CONFIG.END_DATE + 'T23:59:59') : null;
   const textEl = document.getElementById('countdown-text');
   const xpFill = document.getElementById('xp-bar-fill');
@@ -725,8 +726,14 @@ function updateCountdown() {
   if (endLabel) endLabel.textContent = CONFIG.END_DATE ? formatDateLabel(CONFIG.END_DATE) : CONFIG.END_DATE_LABEL;
 
   if (now < start) {
-    const days = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-    textEl.textContent = `KICKOFF IN ${days} DAY${days !== 1 ? 'S' : ''}`;
+    const remainingMs = start - now;
+    const hours = Math.ceil(remainingMs / (1000 * 60 * 60));
+    if (hours <= 48) {
+      textEl.textContent = `KICKOFF IN ${hours} HOUR${hours !== 1 ? 'S' : ''}`;
+    } else {
+      const days = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+      textEl.textContent = `KICKOFF IN ${days} DAY${days !== 1 ? 'S' : ''}`;
+    }
     textEl.className = 'countdown-text blink';
     setProgress(0, 'LOCKED');
   } else if (end && now > end) {
@@ -958,7 +965,7 @@ function clearError() {
 // ── Confetti ───────────────────────────────────
 function checkConfetti() {
   const now = new Date();
-  const start = new Date(CONFIG.START_DATE + 'T00:00:00');
+  const start = new Date(CONFIG.START_AT);
   const end = CONFIG.END_DATE ? new Date(CONFIG.END_DATE + 'T00:00:00') : null;
   const dayMs = 24 * 60 * 60 * 1000;
 
