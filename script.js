@@ -71,7 +71,13 @@ function startApp() {
   setupKonamiCode();
   updateCountdown();
   window.setInterval(updateCountdown, 60000);
-  window.setInterval(() => renderChallenges(challengesData, getCompletionCounts(completionsData)), 60000);
+  window.setInterval(() => {
+    renderChallenges(
+      challengesData,
+      getCompletionCounts(completionsData),
+      getChallengeCompletions(completionsData)
+    );
+  }, 60000);
   refreshData();
 }
 
@@ -394,6 +400,31 @@ function getCompletionCounts(completions) {
   return counts;
 }
 
+function getChallengeCompletions(completions) {
+  const completionsByChallenge = {};
+  const seenNamesByChallenge = {};
+
+  [...completions]
+    .sort((a, b) => parseDate(b['Date']) - parseDate(a['Date']))
+    .forEach(row => {
+      const challenge = (row['Challenge'] || '').trim();
+      const name = (row['Name'] || '').trim();
+      if (!challenge || !name) return;
+
+      if (!completionsByChallenge[challenge]) {
+        completionsByChallenge[challenge] = [];
+        seenNamesByChallenge[challenge] = new Set();
+      }
+
+      const normalizedName = normalizeHeader(name);
+      if (seenNamesByChallenge[challenge].has(normalizedName)) return;
+      seenNamesByChallenge[challenge].add(normalizedName);
+      completionsByChallenge[challenge].push(name);
+    });
+
+  return completionsByChallenge;
+}
+
 function isChallengeActive(challenge, now = new Date()) {
   const when = normalizeHeader(challenge['When']);
   if (!when || when === 'always' || when === 'open') return true;
@@ -414,10 +445,11 @@ function isLimitedChallenge(challenge) {
 function renderAll() {
   const rankings = buildLeaderboard(completionsData);
   const completionCounts = getCompletionCounts(completionsData);
+  const challengeCompletions = getChallengeCompletions(completionsData);
 
   renderPodium(rankings);
   renderRankings(rankings);
-  renderChallenges(challengesData, completionCounts);
+  renderChallenges(challengesData, completionCounts, challengeCompletions);
   renderFeed(completionsData);
   renderStats(rankings, completionCounts);
 }
@@ -487,7 +519,7 @@ function renderRankings(rankings) {
   table.innerHTML = html;
 }
 
-function renderChallenges(challenges, completionCounts) {
+function renderChallenges(challenges, completionCounts, challengeCompletions = {}) {
   const grid = document.getElementById('challenge-grid');
   const activeChallenges = challenges.filter(challenge => isChallengeActive(challenge));
 
@@ -516,6 +548,13 @@ function renderChallenges(challenges, completionCounts) {
       ? `${numericPoints > 0 ? '+' : ''}${numericPoints}`
       : 'TBD';
     const count = completionCounts[name] || 0;
+    const completedNames = [...new Set(challengeCompletions[name] || [])];
+    const completedNamesLabel = completedNames.length
+      ? `Completed by ${completedNames.join(', ')}`
+      : 'Completed names unavailable';
+    const playersLabel = completedNames.length > 0 && completedNames.length !== count
+      ? `<span class="challenge-completion-players">· ${completedNames.length} players</span>`
+      : '';
     const displayTag = cat || type || 'OPEN MISSION';
     const catClass = categoryToClass(cat || type);
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
@@ -523,6 +562,18 @@ function renderChallenges(challenges, completionCounts) {
     const limitedLabel = isLimitedChallenge(ch)
       ? '<span class="challenge-limited" title="Available for a limited time">⌛ LIMITED</span>'
       : '';
+    const completionMarkup = count > 0
+      ? `
+        <div class="challenge-completions">
+          <div class="challenge-completions-summary">
+            <span class="challenge-completion-check" aria-hidden="true">✓</span>
+            <strong>${count}x</strong> completed${playersLabel}
+          </div>
+          <div class="challenge-completers" role="group" aria-label="${escapeAttr(completedNamesLabel)}">
+            ${completedNames.map(person => avatarNameMarkup(person, 'challenge-completer')).join('')}
+          </div>
+        </div>`
+      : '<div class="challenge-completions">Not yet completed</div>';
 
     html += `
       <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(type)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type}`.toLowerCase())}">
@@ -535,7 +586,7 @@ function renderChallenges(challenges, completionCounts) {
           ${limitedLabel}
         </div>
         <div class="challenge-desc">${escapeHTML(desc)}</div>
-        <div class="challenge-completions">${count > 0 ? `<strong>${count}x</strong> completed` : 'Not yet completed'}</div>
+        ${completionMarkup}
       </div>`;
   });
 
@@ -754,7 +805,7 @@ function avatarNameMarkup(name, className) {
   const profile = avatarProfiles[name];
   const avatar = profile ? avatarMarkup(profile) : '';
   return `
-    <button type="button" class="${escapeAttr(`${className} avatar-trigger`)}" data-avatar-name="${escapeAttr(name)}" aria-label="Customize avatar for ${escapeAttr(name)}">
+    <button type="button" class="${escapeAttr(`${className} avatar-trigger`)}" data-avatar-name="${escapeAttr(name)}" aria-label="Open avatar editor for ${escapeAttr(name)}">
       ${avatar}
       <span class="avatar-name-text">${escapeHTML(name)}</span>
     </button>`;
@@ -940,7 +991,11 @@ function setupChallengeSort() {
 
   sort.addEventListener('change', () => {
     challengeState.sort = sort.value;
-    renderChallenges(challengesData, getCompletionCounts(completionsData));
+    renderChallenges(
+      challengesData,
+      getCompletionCounts(completionsData),
+      getChallengeCompletions(completionsData)
+    );
   });
 }
 

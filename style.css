@@ -1879,6 +1879,93 @@ body {
   color: var(--mint);
 }
 
+.challenge-completions-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.challenge-completion-check {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid rgba(101, 230, 180, 0.6);
+  border-radius: 50%;
+  color: var(--mint);
+  background: rgba(101, 230, 180, 0.12);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.challenge-completers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.challenge-completer {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.68rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.challenge-completion-players {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+}
+
+.challenge-completer:hover,
+.challenge-completer:focus-visible {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(0, 212, 255, 0.11);
+  transform: translateY(-1px);
+}
+
+.challenge-completer .player-avatar {
+  width: 22px;
+  height: 22px;
+  border-width: 1px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.challenge-completer .avatar-character {
+  font-size: 0.82rem;
+}
+
+.challenge-completer .avatar-mood {
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  font-size: 0.45rem;
+}
+
+.challenge-completer .avatar-name-text {
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cat-special { border-left: 4px solid var(--accent) !important; }
 .cat-newbie { border-left: 4px solid var(--mint) !important; }
 .cat-faraway { border-left: 4px solid var(--coral) !important; }
@@ -1979,6 +2066,15 @@ body {
   .nav-link {
     font-size: 0.7rem;
     padding: 10px 12px;
+  }
+
+  .challenge-completer {
+    font-size: 0.62rem;
+    padding-right: 6px;
+  }
+
+  .challenge-completer .avatar-name-text {
+    max-width: 10ch;
   }
 
 }
