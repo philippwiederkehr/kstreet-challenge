@@ -1469,6 +1469,13 @@ body {
   margin-bottom: 26px;
 }
 
+.section-title::before,
+.section-title::after {
+  font-size: 0.78em;
+  opacity: 0.78;
+  vertical-align: 0.08em;
+}
+
 .section-kicker {
   text-align: center;
   margin-bottom: 10px;
@@ -1703,7 +1710,6 @@ body {
   0%, 25% { background-position: 150% 0; }
   65%, 100% { background-position: -80% 0; }
 }
-}
 
 .podium-name,
 .podium-score,
@@ -1830,9 +1836,11 @@ body {
 
 .challenge-grid {
   gap: 14px;
+  align-items: start;
 }
 
 .challenge-card {
+  align-self: start;
   min-width: 0;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1954,7 +1962,7 @@ body {
 }
 
 .challenge-desc {
-  min-height: 3.1em;
+  min-height: 0;
   margin-bottom: 13px;
   color: var(--text-dim);
   font-size: 0.96rem;
