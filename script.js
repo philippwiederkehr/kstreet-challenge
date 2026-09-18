@@ -24,29 +24,9 @@ const WEEK_WINDOWS = {
   'week 3': { start: '2026-10-02', end: '2026-10-09' }
 };
 
-const AVATAR_STORAGE_KEY = 'kstreet_v2_avatars';
-const AVATAR_DEFAULTS = { character: 'human', mood: 'happy', theme: 'pink' };
-const AVATAR_CHARACTERS = {
-  human: '🙂',
-  cat: '🐱',
-  dog: '🐶',
-  frog: '🐸',
-  alien: '👽'
-};
-const AVATAR_MOODS = {
-  happy: '✨',
-  cool: '🕶️',
-  silly: '😈',
-  sleepy: '💤'
-};
-
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
-let avatarProfiles = {};
-let activeAvatarName = '';
-let avatarDraft = { ...AVATAR_DEFAULTS };
-let avatarReturnFocus = null;
 let hasRenderedData = false;
 let refreshInFlight = null;
 const challengeState = {
@@ -66,8 +46,6 @@ function startApp() {
   setupChallengeSearch();
   setupChallengeSort();
   setupFeedControls();
-  avatarProfiles = loadAvatarProfiles();
-  setupAvatarEditor();
   setupKonamiCode();
   updateCountdown();
   window.setInterval(updateCountdown, 60000);
@@ -484,7 +462,7 @@ function renderPodium(rankings) {
       html += `
         <div class="podium-place ${p.cls}" aria-label="${p.idx + 1}. place: ${escapeAttr(r.name)}, ${r.points} points">
           <div class="podium-crown" aria-hidden="true">${p.crown}</div>
-          ${avatarNameMarkup(r.name, 'podium-name')}
+          ${playerNameMarkup(r.name, 'podium-name')}
           <div class="podium-score"><strong>${r.points}</strong><span>PTS</span></div>
           <div class="podium-bar"><span class="podium-rank">${p.idx + 1}</span></div>
         </div>`;
@@ -511,7 +489,7 @@ function renderRankings(rankings) {
     html += `
       <div class="rank-row${zeroClass}">
         <span class="rank-number">${r.rank}.</span>
-        ${avatarNameMarkup(r.name, 'rank-name')}
+        ${playerNameMarkup(r.name, 'rank-name')}
         <span class="rank-score">${r.points}</span>
       </div>`;
   });
@@ -570,7 +548,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
             <strong>${count}x</strong> completed${playersLabel}
           </div>
           <div class="challenge-completers" role="group" aria-label="${escapeAttr(completedNamesLabel)}">
-            ${completedNames.map(person => avatarNameMarkup(person, 'challenge-completer')).join('')}
+            ${completedNames.map(person => playerNameMarkup(person, 'challenge-completer')).join('')}
           </div>
         </div>`
       : '<div class="challenge-completions">Not yet completed</div>';
@@ -675,7 +653,7 @@ function renderFeed(completions) {
         <span class="feed-icon">\u{1F3AE}</span>
         <div class="feed-content">
           <div class="feed-text">
-            ${avatarNameMarkup(name, 'feed-name')}
+            ${playerNameMarkup(name, 'feed-name')}
             completed
             <span class="feed-challenge">${escapeHTML(challenge)}</span>
             <span class="feed-points">(${pointSign}${points} pts)</span>
@@ -771,164 +749,10 @@ function updateCountdown() {
   }
 }
 
-// ── Player Avatars ──────────────────────────────
-function loadAvatarProfiles() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(AVATAR_STORAGE_KEY) || '{}');
-    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
-  } catch {
-    return {};
-  }
-}
-
-function normalizeAvatarProfile(profile) {
-  const safeProfile = profile && typeof profile === 'object' ? profile : {};
-  return {
-    character: AVATAR_CHARACTERS[safeProfile.character] ? safeProfile.character : AVATAR_DEFAULTS.character,
-    mood: AVATAR_MOODS[safeProfile.mood] ? safeProfile.mood : AVATAR_DEFAULTS.mood,
-    theme: ['pink', 'blue', 'mint', 'gold'].includes(safeProfile.theme) ? safeProfile.theme : AVATAR_DEFAULTS.theme
-  };
-}
-
-function saveAvatarProfiles() {
-  try {
-    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(avatarProfiles));
-  } catch (err) {
-    console.warn('Could not save avatar:', err);
-  }
-}
-
-function avatarMarkup(profile) {
-  const safeProfile = normalizeAvatarProfile(profile);
-  return `
-    <span class="player-avatar avatar-theme-${safeProfile.theme}" aria-hidden="true">
-      <span class="avatar-character">${AVATAR_CHARACTERS[safeProfile.character]}</span>
-      <span class="avatar-mood">${AVATAR_MOODS[safeProfile.mood]}</span>
-    </span>`;
-}
-
-function avatarNameMarkup(name, className) {
-  if (!name) return `<span class="${escapeAttr(className)}"></span>`;
-  const profile = avatarProfiles[name];
-  const avatar = profile ? avatarMarkup(profile) : '';
-  return `
-    <button type="button" class="${escapeAttr(`${className} avatar-trigger`)}" data-avatar-name="${escapeAttr(name)}" aria-label="Open avatar editor for ${escapeAttr(name)}">
-      ${avatar}
-      <span class="avatar-name-text">${escapeHTML(name)}</span>
-    </button>`;
-}
-
-function setupAvatarEditor() {
-  const modal = document.getElementById('avatar-modal');
-  if (!modal) return;
-
-  document.addEventListener('click', (event) => {
-    const trigger = event.target.closest('.avatar-trigger');
-    if (trigger) {
-      event.preventDefault();
-      openAvatarEditor(trigger.dataset.avatarName || '');
-      return;
-    }
-
-    if (event.target.closest('#avatar-close') || event.target === modal) {
-      closeAvatarEditor();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (modal.classList.contains('hidden')) return;
-
-    if (event.key === 'Escape') {
-      closeAvatarEditor();
-      return;
-    }
-
-    if (event.key !== 'Tab') return;
-
-    const focusable = [...modal.querySelectorAll('button:not([disabled])')];
-    if (focusable.length === 0) return;
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  });
-
-  modal.querySelectorAll('[data-avatar-key]').forEach(option => {
-    option.addEventListener('click', () => {
-      avatarDraft[option.dataset.avatarKey] = option.dataset.avatarValue;
-      updateAvatarEditor();
-    });
-  });
-
-  document.getElementById('avatar-save-btn')?.addEventListener('click', () => {
-    if (!activeAvatarName) return;
-    const name = activeAvatarName;
-    avatarProfiles[activeAvatarName] = normalizeAvatarProfile(avatarDraft);
-    saveAvatarProfiles();
-    closeAvatarEditor();
-    renderAll();
-    focusAvatarTrigger(name);
-  });
-
-  document.getElementById('avatar-clear-btn')?.addEventListener('click', () => {
-    if (!activeAvatarName) return;
-    const name = activeAvatarName;
-    delete avatarProfiles[activeAvatarName];
-    saveAvatarProfiles();
-    closeAvatarEditor();
-    renderAll();
-    focusAvatarTrigger(name);
-  });
-}
-
-function openAvatarEditor(name) {
-  const modal = document.getElementById('avatar-modal');
-  if (!modal || !name) return;
-
-  avatarReturnFocus = document.activeElement;
-  activeAvatarName = name;
-  avatarDraft = normalizeAvatarProfile(avatarProfiles[name]);
-  const player = document.getElementById('avatar-editor-player');
-  if (player) player.textContent = name;
-  modal.classList.remove('hidden');
-  document.body.classList.add('avatar-editor-open');
-  updateAvatarEditor();
-  document.getElementById('avatar-close')?.focus();
-}
-
-function closeAvatarEditor() {
-  const modal = document.getElementById('avatar-modal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  document.body.classList.remove('avatar-editor-open');
-  activeAvatarName = '';
-  avatarReturnFocus?.focus?.();
-  avatarReturnFocus = null;
-}
-
-function focusAvatarTrigger(name) {
-  const trigger = [...document.querySelectorAll('.avatar-trigger')]
-    .find(button => button.dataset.avatarName === name);
-  trigger?.focus();
-}
-
-function updateAvatarEditor() {
-  const preview = document.getElementById('avatar-preview');
-  if (preview) {
-    preview.innerHTML = `${avatarMarkup(avatarDraft)}<span class="avatar-preview-hint">LOOKS GOOD?</span>`;
-  }
-
-  document.querySelectorAll('[data-avatar-key]').forEach(option => {
-    const isSelected = avatarDraft[option.dataset.avatarKey] === option.dataset.avatarValue;
-    option.classList.toggle('selected', isSelected);
-    option.setAttribute('aria-pressed', String(isSelected));
-  });
+function playerNameMarkup(name, className) {
+  return name
+    ? `<span class="${escapeAttr(className)}">${escapeHTML(name)}</span>`
+    : `<span class="${escapeAttr(className)}"></span>`;
 }
 
 // ── Category Filtering ─────────────────────────
