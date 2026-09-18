@@ -39,8 +39,11 @@
           <span class="countdown-text blink" id="countdown-text">LOADING...</span>
         </div>
         <div class="xp-bar-container">
-          <div class="xp-bar-label">EVENT PROGRESS</div>
-          <div class="xp-bar-track">
+          <div class="xp-bar-heading">
+            <div class="xp-bar-label">EVENT PROGRESS</div>
+            <span class="xp-status" id="xp-status">LOCKED</span>
+          </div>
+          <div class="xp-bar-track" role="progressbar" aria-label="Event progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div class="xp-bar-fill" id="xp-bar-fill"></div>
           </div>
           <div class="xp-bar-dates">
@@ -181,7 +184,7 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js?v=4"></script>
+  <script src="script.js?v=5"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

@@ -409,11 +409,11 @@ function renderPodium(rankings) {
     if (rankings[p.idx]) {
       const r = rankings[p.idx];
       html += `
-        <div class="podium-place ${p.cls}">
-          <div class="podium-crown">${p.crown}</div>
+        <div class="podium-place ${p.cls}" aria-label="${p.idx + 1}. place: ${escapeAttr(r.name)}, ${r.points} points">
+          <div class="podium-crown" aria-hidden="true">${p.crown}</div>
           <div class="podium-name">${escapeHTML(r.name)}</div>
-          <div class="podium-score">${r.points} PTS</div>
-          <div class="podium-bar"></div>
+          <div class="podium-score"><strong>${r.points}</strong><span>PTS</span></div>
+          <div class="podium-bar"><span class="podium-rank">${p.idx + 1}</span></div>
         </div>`;
     }
   });
@@ -636,10 +636,18 @@ function updateCountdown() {
   const end = CONFIG.END_DATE ? new Date(CONFIG.END_DATE + 'T23:59:59') : null;
   const textEl = document.getElementById('countdown-text');
   const xpFill = document.getElementById('xp-bar-fill');
+  const xpTrack = xpFill?.parentElement;
+  const xpStatus = document.getElementById('xp-status');
   const startLabel = document.getElementById('event-start-label');
   const endLabel = document.getElementById('event-end-label');
 
   if (!textEl || !xpFill) return;
+
+  const setProgress = (value, status) => {
+    xpFill.style.width = `${value}%`;
+    xpTrack?.setAttribute('aria-valuenow', String(value));
+    if (xpStatus) xpStatus.textContent = status;
+  };
 
   if (startLabel) startLabel.textContent = formatDateLabel(CONFIG.START_DATE);
   if (endLabel) endLabel.textContent = CONFIG.END_DATE ? formatDateLabel(CONFIG.END_DATE) : CONFIG.END_DATE_LABEL;
@@ -648,15 +656,15 @@ function updateCountdown() {
     const days = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
     textEl.textContent = `KICKOFF IN ${days} DAY${days !== 1 ? 'S' : ''}`;
     textEl.className = 'countdown-text blink';
-    xpFill.style.width = '0%';
+    setProgress(0, 'LOCKED');
   } else if (end && now > end) {
     textEl.textContent = 'CHALLENGE ENDED';
     textEl.className = 'countdown-text';
-    xpFill.style.width = '100%';
+    setProgress(100, 'COMPLETE');
   } else if (!end) {
     textEl.textContent = 'V2.0 IS LIVE';
     textEl.className = 'countdown-text';
-    xpFill.style.width = '100%';
+    setProgress(100, 'LIVE');
   } else {
     const totalDuration = end - start;
     const elapsed = now - start;
@@ -665,7 +673,7 @@ function updateCountdown() {
     textEl.textContent = `${days} DAY${days !== 1 ? 'S' : ''} REMAINING`;
     textEl.className = 'countdown-text blink';
     const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
-    xpFill.style.width = progress + '%';
+    setProgress(progress, 'IN PROGRESS');
   }
 }
 
