@@ -311,48 +311,6 @@ body {
   box-shadow: 0 0 9px rgba(98, 217, 255, 0.55);
 }
 
-.xp-finale-marker {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  padding-right: 4px;
-  text-align: right;
-}
-
-.xp-finale-ribbon {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px 3px;
-  border: 1px solid rgba(98, 217, 255, 0.42);
-  border-radius: 999px;
-  color: var(--accent);
-  background: rgba(98, 217, 255, 0.08);
-  font-size: 0.52rem;
-  letter-spacing: 0.08em;
-  box-shadow: 0 0 12px rgba(98, 217, 255, 0.12);
-  animation: final-gate-pulse 3.2s ease-in-out infinite;
-}
-
-.xp-finale-ribbon-star {
-  color: var(--secondary);
-  font-size: 0.72rem;
-  line-height: 1;
-}
-
-.xp-finale-marker::after {
-  content: '';
-  position: absolute;
-  right: 16px;
-  bottom: -8px;
-  width: 2px;
-  height: 8px;
-  background: linear-gradient(var(--secondary), var(--mint));
-  opacity: 0.7;
-}
-
 .xp-date-extended {
   display: inline-block;
   position: relative;
@@ -399,11 +357,6 @@ body {
 @keyframes deadline-sparkle {
   0%, 100% { opacity: 0.35; transform: rotate(45deg) scale(0.8); }
   50% { opacity: 1; transform: rotate(45deg) scale(1.15); }
-}
-
-@keyframes final-gate-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(98, 217, 255, 0.1); }
-  50% { box-shadow: 0 0 18px rgba(98, 217, 255, 0.28); }
 }
 
 /* =============================================
@@ -1628,25 +1581,6 @@ body {
   box-shadow: 0 0 10px rgba(98, 217, 255, 0.14);
 }
 
-.xp-bar-container[data-progress-state="locked"] .xp-finale-ribbon {
-  border-color: rgba(98, 217, 255, 0.5);
-  color: var(--accent);
-}
-
-.xp-bar-container[data-progress-state="live"] .xp-finale-ribbon {
-  border-color: rgba(101, 230, 180, 0.52);
-  color: var(--mint);
-  background: rgba(101, 230, 180, 0.1);
-  box-shadow: 0 0 16px rgba(101, 230, 180, 0.2);
-}
-
-.xp-bar-container[data-progress-state="complete"] .xp-finale-ribbon {
-  border-color: rgba(255, 209, 102, 0.72);
-  color: var(--secondary);
-  background: rgba(255, 209, 102, 0.14);
-  box-shadow: 0 0 18px rgba(255, 209, 102, 0.28);
-}
-
 .xp-bar-heading {
   display: flex;
   align-items: center;
@@ -2151,11 +2085,6 @@ body {
   .xp-bar-dates {
     align-items: flex-start;
     gap: 10px;
-  }
-
-  .xp-finale-ribbon {
-    font-size: 0.45rem;
-    padding: 4px 7px 3px;
   }
 
   .xp-date-extended {
