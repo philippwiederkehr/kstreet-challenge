@@ -2189,3 +2189,99 @@ body {
     animation: none;
   }
 }
+
+/* =============================================
+   Mobile challenge browser
+   ============================================= */
+@media (max-width: 599px) {
+  .filter-tabs {
+    margin-inline: -2px;
+    padding: 2px 2px 10px;
+    scroll-snap-type: inline proximity;
+    overscroll-behavior-inline: contain;
+  }
+
+  .filter-tab {
+    min-height: 44px;
+    padding-inline: 14px;
+    scroll-snap-align: start;
+  }
+
+  .challenge-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .challenge-sort-control {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 5px 5px 5px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    background: rgba(45, 26, 80, 0.52);
+  }
+
+  .challenge-sort-control > span {
+    font-size: 0.5rem;
+    letter-spacing: 0.06em;
+  }
+
+  .challenge-sort-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    max-width: none;
+    padding-inline: 10px;
+    border-color: rgba(98, 217, 255, 0.24);
+    background: rgba(10, 5, 22, 0.72);
+  }
+
+  .challenge-meta {
+    padding: 0 4px;
+    font-size: 0.76rem;
+  }
+
+  .challenge-grid {
+    gap: 10px;
+  }
+
+  .challenge-card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .challenge-card-header {
+    gap: 9px;
+    margin-bottom: 10px;
+  }
+
+  .challenge-name {
+    min-width: 0;
+    font-size: 0.98rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .challenge-points {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 209, 102, 0.34);
+    border-radius: 999px;
+    background: rgba(255, 209, 102, 0.08);
+    font-size: 0.76rem;
+  }
+
+  .challenge-desc {
+    margin-bottom: 11px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .challenge-completions {
+    font-size: 0.76rem;
+  }
+}
