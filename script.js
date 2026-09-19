@@ -303,7 +303,9 @@ function normalizeCompletions(raw) {
     Challenge: normalizeValue(row[columns.challenge]),
     Points: normalizeValue(row[columns.points])
   })).filter(row => {
-    return row.Name && row.Challenge && Number.isFinite(parsePoints(row.Points));
+    // A completion can use a non-point value too. Keep it in the feed and in
+    // completion counts, while the leaderboard only totals numeric values.
+    return row.Name && row.Challenge && row.Points;
   });
 }
 
@@ -335,8 +337,30 @@ function firstNonEmptyValue(row, keys) {
 
 function parsePoints(value) {
   const normalized = normalizeValue(value).replace(',', '.');
-  const match = normalized.match(/^-?\d+(?:\.\d+)?/);
-  return match ? Number(match[0]) : Number.NaN;
+  return /^[+-]?\d+(?:\.\d+)?$/.test(normalized)
+    ? Number(normalized)
+    : Number.NaN;
+}
+
+function formatChallengePoints(value) {
+  const raw = normalizeValue(value);
+  if (!raw) return 'TBD';
+
+  const points = parsePoints(raw);
+  return Number.isFinite(points)
+    ? `${points > 0 ? '+' : ''}${points}`
+    : raw;
+}
+
+function formatCompletionPoints(value) {
+  const raw = normalizeValue(value);
+  const points = parsePoints(raw);
+
+  if (Number.isFinite(points)) {
+    return `${points >= 0 ? '+' : ''}${points} pts`;
+  }
+
+  return raw || 'non-point completion';
 }
 
 // ── Data Processing ────────────────────────────
@@ -346,7 +370,7 @@ function buildLeaderboard(completions) {
   completions.forEach(row => {
     const name = (row['Name'] || '').trim();
     const points = parsePoints(row['Points']);
-    if (!name) return;
+    if (!name || !Number.isFinite(points)) return;
     scores[name] = (scores[name] || 0) + points;
   });
 
@@ -406,10 +430,11 @@ function getChallengeCompletions(completions) {
 
 function isChallengeActive(challenge, now = new Date()) {
   const when = normalizeHeader(challenge['When']);
-  if (!when || when === 'always' || when === 'open') return true;
+  const isKickoff = when.replace(/[\s-]+/g, '') === 'kickoff';
+  if (!when || when === 'always' || when === 'open' || isKickoff) return true;
 
   const window = WEEK_WINDOWS[when];
-  if (!window) return !when.startsWith('week');
+  if (!window) return false;
 
   const start = new Date(`${window.start}T00:00:00`);
   const end = new Date(`${window.end}T00:00:00`);
@@ -523,9 +548,8 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     const ptsRaw = (ch['Points'] || '').trim();
     const numericPoints = parsePoints(ptsRaw);
     const isNegative = Number.isFinite(numericPoints) && numericPoints < 0;
-    const pointsDisplay = Number.isFinite(numericPoints)
-      ? `${numericPoints > 0 ? '+' : ''}${numericPoints}`
-      : 'TBD';
+    const pointsDisplay = formatChallengePoints(ptsRaw);
+    const isNonPoint = ptsRaw !== '' && !Number.isFinite(numericPoints);
     const count = completionCounts[name] || 0;
     const completedNames = [...new Set(challengeCompletions[name] || [])];
     const completedNamesLabel = completedNames.length
@@ -537,7 +561,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     const displayTag = cat || type || 'OPEN MISSION';
     const catClass = categoryToClass(cat || type);
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
-    const pointsClass = isNegative ? ' negative' : '';
+    const pointsClass = `${isNegative ? ' negative' : ''}${isNonPoint ? ' non-point' : ''}`;
     const limitedLabel = isLimitedChallenge(ch)
       ? '<span class="challenge-limited" title="Available for a limited time">⌛ LIMITED</span>'
       : '';
@@ -593,7 +617,7 @@ function renderFeed(completions) {
         const name = (row['Name'] || '').trim();
         const challenge = (row['Challenge'] || '').trim();
         const date = (row['Date'] || '').trim();
-        const points = String(parseFloat(row['Points']) || 0);
+        const points = normalizeValue(row['Points']);
         const searchable = `${name} ${challenge} ${date} ${points}`.toLowerCase();
         return searchable.includes(query);
       })
@@ -647,7 +671,7 @@ function renderFeed(completions) {
     const rowDate = parseDate(date);
     const timeDiff = now - rowDate.getTime();
     const isNew = timeDiff >= 0 && timeDiff < dayMs;
-    const pointSign = points >= 0 ? '+' : '';
+    const pointClass = Number.isFinite(points) ? '' : ' non-point';
 
     html += `
       <div class="feed-item">
@@ -657,7 +681,7 @@ function renderFeed(completions) {
             ${playerNameMarkup(name, 'feed-name')}
             completed
             <span class="feed-challenge">${escapeHTML(challenge)}</span>
-            <span class="feed-points">(${pointSign}${points} pts)</span>
+            <span class="feed-points${pointClass}">(${escapeHTML(formatCompletionPoints(row['Points']))})</span>
           </div>
           <div class="feed-date">${escapeHTML(date)}</div>
         </div>

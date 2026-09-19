@@ -716,6 +716,16 @@ body {
   text-shadow: 0 0 6px rgba(255, 45, 85, 0.3);
 }
 
+.challenge-points.non-point {
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1.3;
+  text-align: right;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .challenge-category-tag {
   display: inline-block;
   padding: 3px 8px;
@@ -880,6 +890,10 @@ body {
 .feed-points {
   color: var(--secondary);
   font-weight: bold;
+}
+
+.feed-points.non-point {
+  color: var(--accent);
 }
 
 .feed-date {
