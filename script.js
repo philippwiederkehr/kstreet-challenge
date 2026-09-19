@@ -6,6 +6,7 @@
 const CONFIG = {
   SHEET_ID: '195wQUuZLInuKr94VusgKgf1GhfoEKUelvvJOOC9-itE',
   CHALLENGES_SHEET: 'Missions V2.0',
+  CHALLENGES_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwrJ3ubrkoho4PA0I-6SMdFlS3nGzshTiQLDydeYvtvjiUrrteF04zl-vksd7VvExR5vuWFi3lp-Jv/pub?gid=1798349526&single=true&output=csv',
   COMPLETIONS_SHEET: 'Pointtracking',
   START_DATE: '2026-09-19',
   START_AT: '2026-09-19T19:00:00+02:00',
@@ -97,6 +98,10 @@ async function refreshData() {
 
 // ── Google Sheets CSV Fetch ────────────────────
 function getSheetURL(sheetName) {
+  if (sheetName === CONFIG.CHALLENGES_SHEET && CONFIG.CHALLENGES_CSV_URL) {
+    return CONFIG.CHALLENGES_CSV_URL;
+  }
+
   return `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
