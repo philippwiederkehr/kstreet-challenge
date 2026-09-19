@@ -12,7 +12,7 @@ const CONFIG = {
   END_DATE: null,
   END_DATE_LABEL: 'FINALE TBC',
   CACHE_NAMESPACE: 'kstreet_v2',
-  CACHE_MINUTES: 5,
+  CACHE_SECONDS: 30,
   TOTAL_RESIDENTS: 42,
   FEED_RECENT_LIMIT: 10
 };
@@ -105,10 +105,10 @@ async function fetchSheetCSV(sheetName) {
   const cacheTimeKey = `${CONFIG.CACHE_NAMESPACE}_${sheetName}_time`;
 
   const cachedData = readCachedSheet(cacheKey, cacheTimeKey);
-  const cacheAge = cachedData ? (Date.now() - cachedData.timestamp) / 60000 : Infinity;
+  const cacheAge = cachedData ? (Date.now() - cachedData.timestamp) / 1000 : Infinity;
 
   // If cache is fresh, use it
-  if (cachedData && cacheAge < CONFIG.CACHE_MINUTES) {
+  if (cachedData && cacheAge < CONFIG.CACHE_SECONDS) {
     return cachedData.rows;
   }
 
