@@ -430,8 +430,7 @@ function getChallengeCompletions(completions) {
 
 function isChallengeActive(challenge, now = new Date()) {
   const when = normalizeHeader(challenge['When']);
-  const isKickoff = when.replace(/[\s-]+/g, '') === 'kickoff';
-  if (!when || when === 'always' || when === 'open' || isKickoff) return true;
+  if (!when || when === 'always' || when === 'open' || isKickoffChallenge(challenge)) return true;
 
   const window = WEEK_WINDOWS[when];
   if (!window) return false;
@@ -439,6 +438,10 @@ function isChallengeActive(challenge, now = new Date()) {
   const start = new Date(`${window.start}T00:00:00`);
   const end = new Date(`${window.end}T00:00:00`);
   return now >= start && now < end;
+}
+
+function isKickoffChallenge(challenge) {
+  return normalizeHeader(challenge['When']).replace(/[\s-]+/g, '') === 'kickoff';
 }
 
 function isLimitedChallenge(challenge) {
@@ -525,7 +528,9 @@ function renderRankings(rankings) {
 
 function renderChallenges(challenges, completionCounts, challengeCompletions = {}) {
   const grid = document.getElementById('challenge-grid');
-  const activeChallenges = challenges.filter(challenge => isChallengeActive(challenge));
+  const activeChallenges = challenges.filter(challenge =>
+    isChallengeActive(challenge) && isKickoffChallenge(challenge)
+  );
 
   if (activeChallenges.length === 0) {
     grid.innerHTML = '<div class="feed-empty">NO MISSIONS LIVE RIGHT NOW</div>';
