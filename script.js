@@ -26,6 +26,60 @@ const WEEK_WINDOWS = {
   'week 3': { start: '2026-10-02', end: '2026-10-09' }
 };
 
+const CHALLENGE_TYPES = Object.freeze({
+  REGULAR: 'regular',
+  NEWBIE: 'newbie',
+  FARAWAY: 'faraway',
+  PARTY: 'party',
+  SPECIAL: 'special'
+});
+
+const CHALLENGE_TYPE_ORDER = [
+  CHALLENGE_TYPES.REGULAR,
+  CHALLENGE_TYPES.NEWBIE,
+  CHALLENGE_TYPES.FARAWAY,
+  CHALLENGE_TYPES.PARTY,
+  CHALLENGE_TYPES.SPECIAL
+];
+
+const CHALLENGE_TYPE_LABELS = Object.freeze({
+  [CHALLENGE_TYPES.REGULAR]: 'REGULAR MISSION',
+  [CHALLENGE_TYPES.NEWBIE]: 'NEWBIE MISSION',
+  [CHALLENGE_TYPES.FARAWAY]: 'FARAWAY MISSION',
+  [CHALLENGE_TYPES.PARTY]: 'PARTY MISSION',
+  [CHALLENGE_TYPES.SPECIAL]: 'SPECIAL MISSION'
+});
+
+const CHALLENGE_TYPE_CLASSES = Object.freeze({
+  [CHALLENGE_TYPES.REGULAR]: 'cat-regular',
+  [CHALLENGE_TYPES.NEWBIE]: 'cat-newbie',
+  [CHALLENGE_TYPES.FARAWAY]: 'cat-faraway',
+  [CHALLENGE_TYPES.PARTY]: 'cat-opening-night',
+  [CHALLENGE_TYPES.SPECIAL]: 'cat-special'
+});
+
+const CATEGORY_ORDER = [
+  'Chaos Entertainment',
+  'K-Street Chemistry',
+  'House Heroes',
+  'Unhinged Legends'
+];
+
+const CATEGORY_LABELS = Object.freeze({
+  'Chaos Entertainment': 'CHAOS ENTERTAINMENT',
+  'K-Street Chemistry': 'K-STREET CHEMISTRY',
+  'House Heroes': 'HOUSE HEROES',
+  'Unhinged Legends': 'UNHINGED LEGENDS'
+});
+
+const ALLOWED_WHEN = new Set([
+  'always',
+  'kickoff',
+  'week 1',
+  'week 2',
+  'week 3'
+]);
+
 // ── State ──────────────────────────────────────
 let challengesData = [];
 let completionsData = [];
@@ -75,7 +129,7 @@ async function refreshData() {
       completionsData = normalizeCompletions(completions);
 
       clearError();
-      renderFilterTabs(challengesData);
+      renderFilterTabs();
       setupFilterTabs();
       renderAll();
       showApp();
@@ -277,17 +331,22 @@ function normalizeChallenges(raw) {
     category: keyFor(['category', 'challenge category'])
   };
 
-  return raw.map(row => ({
-    'Category': normalizeValue(row[columns.category]),
-    'Challenge Name': normalizeValue(row[columns.name]),
-    'Description': normalizeValue(row[columns.description]),
-    'Points': firstNonEmptyValue(row, columns.points),
-    'When': normalizeValue(row[columns.when]),
-    'Type': normalizeValue(row[columns.type])
-  })).filter(challenge => {
-    const name = challenge['Challenge Name'];
-    return name && !/^ONLY\s+/i.test(name);
-  });
+  return raw.map(row => {
+    const challenge = {
+      'Category': normalizeValue(row[columns.category]),
+      'Challenge Name': normalizeValue(row[columns.name]),
+      'Description': normalizeValue(row[columns.description]),
+      'Points': firstNonEmptyValue(row, columns.points),
+      'When': normalizeValue(row[columns.when]),
+      'Type': normalizeValue(row[columns.type])
+    };
+
+    return {
+      ...challenge,
+      typeKey: normalizeChallengeType(challenge['Type']),
+      whenKey: normalizeChallengeWhen(challenge['When'])
+    };
+  }).filter(isEligibleChallenge);
 }
 
 function normalizeCompletions(raw) {
@@ -334,6 +393,48 @@ function findColumnKey(sampleKeys, names) {
 
 function normalizeValue(value) {
   return String(value == null ? '' : value).replace(/[\u00a0\s]+/g, ' ').trim();
+}
+
+function normalizeChallengeType(value) {
+  const type = normalizeHeader(value).replace(/[\-_]+/g, ' ');
+  const aliases = {
+    regular: CHALLENGE_TYPES.REGULAR,
+    'regular mission': CHALLENGE_TYPES.REGULAR,
+    'regular missions': CHALLENGE_TYPES.REGULAR,
+    newbie: CHALLENGE_TYPES.NEWBIE,
+    'newbie mission': CHALLENGE_TYPES.NEWBIE,
+    'newbie missions': CHALLENGE_TYPES.NEWBIE,
+    faraway: CHALLENGE_TYPES.FARAWAY,
+    'faraway mission': CHALLENGE_TYPES.FARAWAY,
+    'faraway missions': CHALLENGE_TYPES.FARAWAY,
+    party: CHALLENGE_TYPES.PARTY,
+    'party mission': CHALLENGE_TYPES.PARTY,
+    'party missions': CHALLENGE_TYPES.PARTY,
+    'party challenge': CHALLENGE_TYPES.PARTY,
+    'party challenges': CHALLENGE_TYPES.PARTY,
+    special: CHALLENGE_TYPES.SPECIAL,
+    'special mission': CHALLENGE_TYPES.SPECIAL,
+    'special missions': CHALLENGE_TYPES.SPECIAL
+  };
+
+  return aliases[type] || null;
+}
+
+function normalizeChallengeWhen(value) {
+  const when = normalizeHeader(value).replace(/[\-_]+/g, ' ');
+  if (when === 'kick off' || when === 'kickoff') return 'kickoff';
+  return ALLOWED_WHEN.has(when) ? when : null;
+}
+
+function isEligibleChallenge(challenge) {
+  const name = challenge['Challenge Name'];
+  const typeKey = challenge.typeKey || normalizeChallengeType(challenge['Type']);
+  const whenKey = challenge.whenKey || normalizeChallengeWhen(challenge['When']);
+
+  if (!name || /^ONLY\s+/i.test(name) || !typeKey || !whenKey) return false;
+
+  // Party challenges are the kickoff-only missions in the source sheet.
+  return typeKey !== CHALLENGE_TYPES.PARTY || isKickoffChallenge(challenge);
 }
 
 function firstNonEmptyValue(row, keys) {
@@ -433,24 +534,12 @@ function getChallengeCompletions(completions) {
   return completionsByChallenge;
 }
 
-function isChallengeActive(challenge, now = new Date()) {
-  const when = normalizeHeader(challenge['When']);
-  if (!when || when === 'always' || when === 'open' || isKickoffChallenge(challenge)) return true;
-
-  const window = WEEK_WINDOWS[when];
-  if (!window) return false;
-
-  const start = new Date(`${window.start}T00:00:00`);
-  const end = new Date(`${window.end}T00:00:00`);
-  return now >= start && now < end;
-}
-
 function isKickoffChallenge(challenge) {
-  return normalizeHeader(challenge['When']).replace(/[\s-]+/g, '') === 'kickoff';
+  return (challenge.whenKey || normalizeChallengeWhen(challenge['When'])) === 'kickoff';
 }
 
 function isLimitedChallenge(challenge) {
-  return Boolean(WEEK_WINDOWS[normalizeHeader(challenge['When'])]);
+  return Boolean(WEEK_WINDOWS[challenge.whenKey || normalizeChallengeWhen(challenge['When'])]);
 }
 
 // ── Rendering ──────────────────────────────────
@@ -533,12 +622,10 @@ function renderRankings(rankings) {
 
 function renderChallenges(challenges, completionCounts, challengeCompletions = {}) {
   const grid = document.getElementById('challenge-grid');
-  const activeChallenges = challenges.filter(challenge =>
-    isChallengeActive(challenge) && isKickoffChallenge(challenge)
-  );
+  const visibleChallenges = challenges.filter(isEligibleChallenge);
 
-  if (activeChallenges.length === 0) {
-    grid.innerHTML = '<div class="feed-empty">NO MISSIONS LIVE RIGHT NOW</div>';
+  if (visibleChallenges.length === 0) {
+    grid.innerHTML = '<div class="feed-empty">NO MISSIONS AVAILABLE</div>';
     const meta = document.getElementById('challenge-meta');
     const emptyState = document.getElementById('challenge-empty-state');
     if (meta) meta.textContent = '0 missions shown';
@@ -546,13 +633,14 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     return;
   }
 
-  const sorted = sortChallenges(activeChallenges, completionCounts);
+  const sorted = sortChallenges(visibleChallenges, completionCounts);
 
   let html = '';
   sorted.forEach(ch => {
     const cat = (ch['Category'] || '').trim();
     const type = (ch['Type'] || '').trim();
     const when = (ch['When'] || '').trim();
+    const typeKey = ch.typeKey || normalizeChallengeType(type);
     const name = (ch['Challenge Name'] || '').trim();
     const desc = (ch['Description'] || '').trim();
     const ptsRaw = (ch['Points'] || '').trim();
@@ -568,8 +656,12 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     const playersLabel = completedNames.length > 0 && completedNames.length !== count
       ? `<span class="challenge-completion-players">· ${completedNames.length} players</span>`
       : '';
-    const displayTag = cat || type || 'OPEN MISSION';
-    const catClass = categoryToClass(cat || type);
+    const displayTag = typeKey === CHALLENGE_TYPES.REGULAR
+      ? cat || CHALLENGE_TYPE_LABELS[CHALLENGE_TYPES.REGULAR]
+      : CHALLENGE_TYPE_LABELS[typeKey] || type || 'OPEN MISSION';
+    const catClass = typeKey === CHALLENGE_TYPES.REGULAR
+      ? categoryToClass(cat) || 'cat-regular'
+      : CHALLENGE_TYPE_CLASSES[typeKey] || categoryToClass(type) || 'cat-regular';
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
     const pointsClass = `${isNegative ? ' negative' : ''}${isNonPoint ? ' non-point' : ''}`;
     const limitedLabel = isLimitedChallenge(ch)
@@ -589,7 +681,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
       : '<div class="challenge-completions">Not yet completed</div>';
 
     html += `
-      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(type)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type}`.toLowerCase())}">
+      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(typeKey || '')}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type} ${displayTag} ${when}`.toLowerCase())}">
         <div class="challenge-card-header">
           <span class="challenge-name">${escapeHTML(name)}</span>
           <span class="challenge-points${pointsClass}">${escapeHTML(pointsDisplay)}</span>
@@ -797,30 +889,17 @@ function playerNameMarkup(name, className) {
 }
 
 // ── Category Filtering ─────────────────────────
-function renderFilterTabs(challenges) {
+function renderFilterTabs() {
   const tabs = document.getElementById('filter-tabs');
   if (!tabs) return;
 
-  const categoryOrder = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
-  const categories = [...new Set(challenges.map(challenge => challenge['Category']).filter(Boolean))]
-    .sort((a, b) => {
-      const ai = categoryOrder.indexOf(a);
-      const bi = categoryOrder.indexOf(b);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
-    });
-  const types = [...new Set(challenges.map(challenge => challenge['Type']).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-
-  const categoryLabels = {
-    'Chaos Entertainment': 'CHAOS',
-    'K-Street Chemistry': 'CHEMISTRY',
-    'House Heroes': 'HOUSE HEROES',
-    'Unhinged Legends': 'UNHINGED'
-  };
+  // Keep the requested filter buttons stable even if a type has no rows yet.
+  const categories = CATEGORY_ORDER;
+  const types = CHALLENGE_TYPE_ORDER.filter(typeKey => typeKey !== CHALLENGE_TYPES.REGULAR);
   const availableFilters = new Set([
     'all',
-    ...categories,
-    ...types.map(type => `type:${type}`)
+    ...categories.map(category => `category:${category}`),
+    ...types.map(typeKey => `type:${typeKey}`)
   ]);
   if (!availableFilters.has(challengeState.filter)) {
     challengeState.filter = 'all';
@@ -831,8 +910,8 @@ function renderFilterTabs(challenges) {
 
   tabs.innerHTML = [
     tab('all', 'ALL'),
-    ...categories.map(category => tab(category, categoryLabels[category] || category.toUpperCase())),
-    ...types.map(type => tab(`type:${type}`, type.replace(/\s+Mission$/i, '').toUpperCase()))
+    ...categories.map(category => tab(`category:${category}`, CATEGORY_LABELS[category] || category.toUpperCase())),
+    ...types.map(typeKey => tab(`type:${typeKey}`, CHALLENGE_TYPE_LABELS[typeKey]))
   ].join('');
 }
 
@@ -872,9 +951,17 @@ function setupChallengeSort() {
 }
 
 function sortChallenges(challenges, completionCounts) {
-  const CATEGORY_ORDER = ['Chaos Entertainment', 'K-Street Chemistry', 'House Heroes', 'Unhinged Legends'];
   const sortMode = challengeState.sort;
   const compareNames = (a, b) => (a['Challenge Name'] || '').localeCompare(b['Challenge Name'] || '');
+  const getTypeKey = challenge => challenge.typeKey || normalizeChallengeType(challenge['Type']);
+  const getTypeOrder = challenge => {
+    const index = CHALLENGE_TYPE_ORDER.indexOf(getTypeKey(challenge));
+    return index === -1 ? 99 : index;
+  };
+  const getCategoryOrder = challenge => {
+    const index = CATEGORY_ORDER.indexOf(challenge['Category']);
+    return index === -1 ? 99 : index;
+  };
 
   return [...challenges].sort((a, b) => {
     if (sortMode === 'name') return compareNames(a, b);
@@ -897,10 +984,15 @@ function sortChallenges(challenges, completionCounts) {
       return bCount - aCount || compareNames(a, b);
     }
 
-    const ai = CATEGORY_ORDER.indexOf(a['Category']);
-    const bi = CATEGORY_ORDER.indexOf(b['Category']);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-      || (a['Type'] || '').localeCompare(b['Type'] || '')
+    const aTypeKey = getTypeKey(a);
+    const bTypeKey = getTypeKey(b);
+    const typeOrder = getTypeOrder(a) - getTypeOrder(b);
+    const categoryOrder = aTypeKey === CHALLENGE_TYPES.REGULAR && bTypeKey === CHALLENGE_TYPES.REGULAR
+      ? getCategoryOrder(a) - getCategoryOrder(b)
+      : 0;
+
+    return typeOrder
+      || categoryOrder
       || compareNames(a, b);
   });
 }
@@ -938,7 +1030,11 @@ function applyChallengeFilters() {
     const filter = challengeState.filter;
     const matchesFilter = filter === 'all'
       || (filter.startsWith('type:') && card.dataset.type === filter.slice(5))
-      || (!filter.startsWith('type:') && card.dataset.category === filter);
+      || (
+        filter.startsWith('category:')
+        && card.dataset.type === CHALLENGE_TYPES.REGULAR
+        && card.dataset.category === filter.slice(9)
+      );
     const matchesQuery = !challengeState.query || card.dataset.search.includes(challengeState.query);
     const isVisible = matchesFilter && matchesQuery;
     card.style.display = isVisible ? '' : 'none';
@@ -1130,6 +1226,7 @@ function categoryToClass(category) {
     'Unhinged Legends': 'cat-unhinged-legends',
     'Opening Night Shenanigans': 'cat-opening-night',
     'Party': 'cat-opening-night',
+    'Party Mission': 'cat-opening-night',
     'Special Mission': 'cat-special',
     'Newbie Mission': 'cat-newbie',
     'Faraway Mission': 'cat-faraway',
