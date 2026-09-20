@@ -849,7 +849,14 @@ function updateCountdown() {
   };
 
   if (startLabel) startLabel.textContent = formatDateLabel(CONFIG.START_DATE);
-  if (endLabel) endLabel.textContent = CONFIG.END_DATE ? formatDateLabel(CONFIG.END_DATE) : CONFIG.END_DATE_LABEL;
+  if (endLabel) {
+    const endDateLabel = CONFIG.END_DATE ? formatDateLabel(CONFIG.END_DATE) : CONFIG.END_DATE_LABEL;
+    endLabel.textContent = endDateLabel;
+    endLabel.setAttribute(
+      'aria-label',
+      CONFIG.END_DATE ? `Finale date: ${endDateLabel}` : 'Finale date to be announced'
+    );
+  }
 
   if (now < start) {
     const remainingMs = start - now;
