@@ -1371,6 +1371,14 @@ function parseDate(str) {
     if (!Number.isNaN(timestamp.getTime())) return timestamp;
   }
 
+  // The Pointtracking sheet exports Swiss dates such as "19.9" without a year.
+  // Use the configured season year so these dates sort chronologically.
+  const seasonDate = s.match(/^(\d{1,2})\.(\d{1,2})\.?$/);
+  if (seasonDate) {
+    const [, day, month] = seasonDate.map(Number);
+    return validDate(Number(CONFIG.START_DATE.slice(0, 4)), month, day);
+  }
+
   // Slash/dot/dash dates are normally day-first in the Swiss sheet. If the
   // middle segment is greater than 12, accept the unambiguous US variant too.
   const parts = s.split(/[./-]/);
