@@ -10,6 +10,7 @@ const CONFIG = {
   COMPLETIONS_SHEET: 'Pointtracking',
   START_DATE: '2026-09-19',
   START_AT: '2026-09-19T19:00:00+02:00',
+  TIME_ZONE: 'Europe/Zurich',
   END_DATE: '2026-10-09',
   END_DATE_LABEL: 'FINALE TBC',
   CACHE_NAMESPACE: 'kstreet_v2',
@@ -18,13 +19,20 @@ const CONFIG = {
   FEED_RECENT_LIMIT: 10
 };
 
-// Week missions are available until the next published kickoff.
-// End dates are exclusive so adjacent weeks never overlap.
+// Week missions unlock at their published kickoff and remain visible as overdue.
+// End dates are exclusive and use the event's time zone, not the visitor's.
 const WEEK_WINDOWS = {
   'week 1': { start: '2026-09-19', end: '2026-09-25' },
   'week 2': { start: '2026-09-25', end: '2026-10-02' },
   'week 3': { start: '2026-10-02', end: '2026-10-09' }
 };
+
+const EVENT_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CONFIG.TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
 
 const CHALLENGE_TYPES = Object.freeze({
   REGULAR: 'regular',
@@ -538,8 +546,23 @@ function isKickoffChallenge(challenge) {
   return (challenge.whenKey || normalizeChallengeWhen(challenge['When'])) === 'kickoff';
 }
 
-function isLimitedChallenge(challenge) {
-  return Boolean(WEEK_WINDOWS[challenge.whenKey || normalizeChallengeWhen(challenge['When'])]);
+function getChallengeStatus(challenge, now = new Date()) {
+  const when = challenge.whenKey || normalizeChallengeWhen(challenge['When']);
+  if (when === 'always') return 'active';
+  if (!when) return 'hidden';
+
+  const parts = EVENT_DATE_FORMAT.formatToParts(now);
+  const part = type => parts.find(value => value.type === type).value;
+  const today = `${part('year')}-${part('month')}-${part('day')}`;
+
+  // The first week and kickoff both start at the configured opening time.
+  if (now < new Date(CONFIG.START_AT)) return 'upcoming';
+  if (when === 'kickoff') return today > CONFIG.START_DATE ? 'overdue' : 'active';
+
+  const window = WEEK_WINDOWS[when];
+  if (!window) return 'hidden';
+  if (today < window.start) return 'upcoming';
+  return today >= window.end ? 'overdue' : 'active';
 }
 
 // ── Rendering ──────────────────────────────────
@@ -620,9 +643,13 @@ function renderRankings(rankings) {
   table.innerHTML = html;
 }
 
-function renderChallenges(challenges, completionCounts, challengeCompletions = {}) {
+function renderChallenges(challenges, completionCounts, challengeCompletions = {}, now = new Date()) {
   const grid = document.getElementById('challenge-grid');
-  const visibleChallenges = challenges.filter(isEligibleChallenge);
+  const visibleChallenges = challenges.filter(challenge => {
+    if (!isEligibleChallenge(challenge)) return false;
+    const status = getChallengeStatus(challenge, now);
+    return status === 'active' || status === 'overdue';
+  });
 
   if (visibleChallenges.length === 0) {
     grid.innerHTML = '<div class="feed-empty">NO MISSIONS AVAILABLE</div>';
@@ -664,8 +691,11 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
       : CHALLENGE_TYPE_CLASSES[typeKey] || categoryToClass(type) || 'cat-regular';
     const catTagClass = 'cat-tag-' + catClass.replace('cat-', '');
     const pointsClass = `${isNegative ? ' negative' : ''}${isNonPoint ? ' non-point' : ''}`;
-    const limitedLabel = isLimitedChallenge(ch)
-      ? '<span class="challenge-limited" title="Available for a limited time">⌛ LIMITED</span>'
+    const status = getChallengeStatus(ch, now);
+    const whenKey = ch.whenKey || normalizeChallengeWhen(when);
+    const scheduleName = whenKey === 'kickoff' ? 'KICK-OFF' : whenKey.toUpperCase();
+    const scheduleLabel = whenKey !== 'always'
+      ? `<span class="challenge-limited${status === 'overdue' ? ' challenge-overdue' : ''}" title="${status === 'overdue' ? 'This challenge period has ended' : 'Available during this period'}">${escapeHTML(scheduleName)} · ${status === 'overdue' ? 'OVERDUE' : 'LIVE'}</span>`
       : '';
     const completionMarkup = count > 0
       ? `
@@ -688,7 +718,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
         </div>
         <div class="challenge-tags">
           <span class="challenge-category-tag ${catTagClass}">${escapeHTML(displayTag)}</span>
-          ${limitedLabel}
+          ${scheduleLabel}
         </div>
         <div class="challenge-desc">${escapeHTML(desc)}</div>
         ${completionMarkup}

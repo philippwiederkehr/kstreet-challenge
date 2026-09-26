@@ -1841,6 +1841,12 @@ body {
   border: 1px solid rgba(98, 217, 255, 0.28);
 }
 
+.challenge-overdue {
+  color: var(--coral);
+  background: rgba(255, 138, 128, 0.1);
+  border-color: rgba(255, 138, 128, 0.28);
+}
+
 .challenge-empty-state {
   margin-top: 14px;
   padding: 24px 12px;
