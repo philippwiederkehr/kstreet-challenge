@@ -27,6 +27,9 @@ const WEEK_WINDOWS = {
   'week 3': { start: '2026-10-02', end: '2026-10-09' }
 };
 
+// Chalet Weekend runs through Sunday; the end date is exclusive.
+const CHALET_WINDOW = { start: '2026-10-09', end: '2026-10-12' };
+
 const EVENT_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', {
   timeZone: CONFIG.TIME_ZONE,
   year: 'numeric',
@@ -85,7 +88,8 @@ const ALLOWED_WHEN = new Set([
   'kickoff',
   'week 1',
   'week 2',
-  'week 3'
+  'week 3',
+  'chalet'
 ]);
 
 // ── State ──────────────────────────────────────
@@ -94,7 +98,7 @@ let completionsData = [];
 let hasRenderedData = false;
 let refreshInFlight = null;
 const challengeState = {
-  filter: 'all',
+  filter: getDefaultChallengeFilter(),
   query: '',
   sort: 'category'
 };
@@ -116,8 +120,8 @@ function startApp() {
   window.setInterval(() => {
     renderChallenges(
       challengesData,
-      getCompletionCounts(completionsData),
-      getChallengeCompletions(completionsData)
+      getCompletionCounts(completionsData, challengesData),
+      getChallengeCompletions(completionsData, challengesData)
     );
   }, 60000);
   refreshData();
@@ -441,8 +445,8 @@ function isEligibleChallenge(challenge) {
 
   if (!name || /^ONLY\s+/i.test(name) || !typeKey || !whenKey) return false;
 
-  // Party challenges are the kickoff-only missions in the source sheet.
-  return typeKey !== CHALLENGE_TYPES.PARTY || isKickoffChallenge(challenge);
+  // Party missions are published for kickoff or Chalet Weekend.
+  return typeKey !== CHALLENGE_TYPES.PARTY || isKickoffChallenge(challenge) || whenKey === 'chalet';
 }
 
 function firstNonEmptyValue(row, keys) {
@@ -506,10 +510,35 @@ function buildLeaderboard(completions) {
   return sorted;
 }
 
-function getCompletionCounts(completions) {
+function getChallengeKey(challenge) {
+  const when = challenge.whenKey || normalizeChallengeWhen(challenge['When']);
+  return `${when}:${challenge['Challenge Name']}`;
+}
+
+function getCompletionMissionKey(row, challenges) {
+  const name = (row['Challenge'] || '').trim();
+  const matches = challenges.filter(challenge => challenge['Challenge Name'] === name);
+  if (matches.length === 0) return name;
+  if (matches.length === 1) return getChallengeKey(matches[0]);
+
+  // Reused names refer to different missions. Sheet dates are calendar days,
+  // so compare those days to their published periods, independent of visitor time zone.
+  const date = parseDate(row['Date']);
+  const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const inPeriod = matches.filter(challenge => {
+    const when = challenge.whenKey || normalizeChallengeWhen(challenge['When']);
+    if (when === 'always') return true;
+    if (when === 'kickoff') return day === CONFIG.START_DATE;
+    const window = when === 'chalet' ? CHALET_WINDOW : WEEK_WINDOWS[when];
+    return window && day >= window.start && day < window.end;
+  });
+  return inPeriod.length === 1 ? getChallengeKey(inPeriod[0]) : null;
+}
+
+function getCompletionCounts(completions, challenges = []) {
   const counts = {};
   completions.forEach(row => {
-    const challenge = (row['Challenge'] || '').trim();
+    const challenge = getCompletionMissionKey(row, challenges);
     if (challenge) {
       counts[challenge] = (counts[challenge] || 0) + 1;
     }
@@ -517,14 +546,14 @@ function getCompletionCounts(completions) {
   return counts;
 }
 
-function getChallengeCompletions(completions) {
+function getChallengeCompletions(completions, challenges = []) {
   const completionsByChallenge = {};
   const seenNamesByChallenge = {};
 
   [...completions]
     .sort((a, b) => parseDate(b['Date']) - parseDate(a['Date']))
     .forEach(row => {
-      const challenge = (row['Challenge'] || '').trim();
+      const challenge = getCompletionMissionKey(row, challenges);
       const name = (row['Name'] || '').trim();
       if (!challenge || !name) return;
 
@@ -546,20 +575,29 @@ function isKickoffChallenge(challenge) {
   return (challenge.whenKey || normalizeChallengeWhen(challenge['When'])) === 'kickoff';
 }
 
+function getEventDate(now = new Date()) {
+  const parts = EVENT_DATE_FORMAT.formatToParts(now);
+  const part = type => parts.find(value => value.type === type).value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function getDefaultChallengeFilter(now = new Date()) {
+  const today = getEventDate(now);
+  return today >= CHALET_WINDOW.start && today < CHALET_WINDOW.end ? 'when:chalet' : 'all';
+}
+
 function getChallengeStatus(challenge, now = new Date()) {
   const when = challenge.whenKey || normalizeChallengeWhen(challenge['When']);
   if (when === 'always') return 'active';
   if (!when) return 'hidden';
 
-  const parts = EVENT_DATE_FORMAT.formatToParts(now);
-  const part = type => parts.find(value => value.type === type).value;
-  const today = `${part('year')}-${part('month')}-${part('day')}`;
+  const today = getEventDate(now);
 
   // The first week and kickoff both start at the configured opening time.
   if (now < new Date(CONFIG.START_AT)) return 'upcoming';
   if (when === 'kickoff') return today > CONFIG.START_DATE ? 'overdue' : 'active';
 
-  const window = WEEK_WINDOWS[when];
+  const window = when === 'chalet' ? CHALET_WINDOW : WEEK_WINDOWS[when];
   if (!window) return 'hidden';
   if (today < window.start) return 'upcoming';
   return today >= window.end ? 'overdue' : 'active';
@@ -568,14 +606,14 @@ function getChallengeStatus(challenge, now = new Date()) {
 // ── Rendering ──────────────────────────────────
 function renderAll() {
   const rankings = buildLeaderboard(completionsData);
-  const completionCounts = getCompletionCounts(completionsData);
-  const challengeCompletions = getChallengeCompletions(completionsData);
+  const completionCounts = getCompletionCounts(completionsData, challengesData);
+  const challengeCompletions = getChallengeCompletions(completionsData, challengesData);
 
   renderPodium(rankings);
   renderRankings(rankings);
   renderChallenges(challengesData, completionCounts, challengeCompletions);
   renderFeed(completionsData);
-  renderStats(rankings, completionCounts);
+  renderStats(rankings, getCompletionCounts(completionsData));
 }
 
 function renderPodium(rankings) {
@@ -675,8 +713,9 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     const isNegative = Number.isFinite(numericPoints) && numericPoints < 0;
     const pointsDisplay = formatChallengePoints(ptsRaw);
     const isNonPoint = ptsRaw !== '' && !Number.isFinite(numericPoints);
-    const count = completionCounts[name] || 0;
-    const completedNames = [...new Set(challengeCompletions[name] || [])];
+    const key = getChallengeKey(ch);
+    const count = completionCounts[key] || 0;
+    const completedNames = [...new Set(challengeCompletions[key] || [])];
     const completedNamesLabel = completedNames.length
       ? `Completed by ${completedNames.join(', ')}`
       : 'Completed names unavailable';
@@ -693,7 +732,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
     const pointsClass = `${isNegative ? ' negative' : ''}${isNonPoint ? ' non-point' : ''}`;
     const status = getChallengeStatus(ch, now);
     const whenKey = ch.whenKey || normalizeChallengeWhen(when);
-    const scheduleName = whenKey === 'kickoff' ? 'KICK-OFF' : whenKey.toUpperCase();
+    const scheduleName = whenKey === 'kickoff' ? 'KICK-OFF' : whenKey === 'chalet' ? 'CHALET WEEKEND' : whenKey.toUpperCase();
     const scheduleLabel = whenKey !== 'always'
       ? `<span class="challenge-limited${status === 'overdue' ? ' challenge-overdue' : ''}" title="${status === 'overdue' ? 'This challenge period has ended' : 'Available during this period'}">${escapeHTML(scheduleName)} · ${status === 'overdue' ? 'OVERDUE' : 'LIVE'}</span>`
       : '';
@@ -711,7 +750,7 @@ function renderChallenges(challenges, completionCounts, challengeCompletions = {
       : '<div class="challenge-completions">Not yet completed</div>';
 
     html += `
-      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(typeKey || '')}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type} ${displayTag} ${when}`.toLowerCase())}">
+      <div class="challenge-card ${catClass}" data-category="${escapeAttr(cat)}" data-type="${escapeAttr(typeKey || '')}" data-when="${escapeAttr(whenKey)}" data-search="${escapeAttr(`${name} ${desc} ${cat} ${type} ${displayTag} ${when}`.toLowerCase())}">
         <div class="challenge-card-header">
           <span class="challenge-name">${escapeHTML(name)}</span>
           <span class="challenge-points${pointsClass}">${escapeHTML(pointsDisplay)}</span>
@@ -935,6 +974,7 @@ function renderFilterTabs() {
   const types = CHALLENGE_TYPE_ORDER.filter(typeKey => typeKey !== CHALLENGE_TYPES.REGULAR);
   const availableFilters = new Set([
     'all',
+    'when:chalet',
     ...categories.map(category => `category:${category}`),
     ...types.map(typeKey => `type:${typeKey}`)
   ]);
@@ -943,10 +983,11 @@ function renderFilterTabs() {
   }
 
   const tab = (value, label) => `
-    <button type="button" class="filter-tab${value === challengeState.filter ? ' active' : ''}" data-filter="${escapeAttr(value)}">${escapeHTML(label)}</button>`;
+    <button type="button" class="filter-tab${value === challengeState.filter ? ' active' : ''}" data-filter="${escapeAttr(value)}" aria-pressed="${value === challengeState.filter}">${escapeHTML(label)}</button>`;
 
   tabs.innerHTML = [
     tab('all', 'ALL'),
+    tab('when:chalet', 'CHALET WEEKEND'),
     ...categories.map(category => tab(`category:${category}`, CATEGORY_LABELS[category] || category.toUpperCase())),
     ...types.map(typeKey => tab(`type:${typeKey}`, CHALLENGE_TYPE_LABELS[typeKey]))
   ].join('');
@@ -956,8 +997,12 @@ function setupFilterTabs() {
   const tabs = document.querySelectorAll('.filter-tab');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-pressed', 'false');
+      });
       tab.classList.add('active');
+      tab.setAttribute('aria-pressed', 'true');
       filterByCategory(tab.dataset.filter || tab.dataset.category || 'all');
     });
   });
@@ -981,8 +1026,8 @@ function setupChallengeSort() {
     challengeState.sort = sort.value;
     renderChallenges(
       challengesData,
-      getCompletionCounts(completionsData),
-      getChallengeCompletions(completionsData)
+      getCompletionCounts(completionsData, challengesData),
+      getChallengeCompletions(completionsData, challengesData)
     );
   });
 }
@@ -1016,8 +1061,8 @@ function sortChallenges(challenges, completionCounts) {
     }
 
     if (sortMode === 'completions-desc') {
-      const aCount = completionCounts[a['Challenge Name']] || 0;
-      const bCount = completionCounts[b['Challenge Name']] || 0;
+      const aCount = completionCounts[getChallengeKey(a)] || 0;
+      const bCount = completionCounts[getChallengeKey(b)] || 0;
       return bCount - aCount || compareNames(a, b);
     }
 
@@ -1066,6 +1111,7 @@ function applyChallengeFilters() {
   cards.forEach(card => {
     const filter = challengeState.filter;
     const matchesFilter = filter === 'all'
+      || (filter.startsWith('when:') && card.dataset.when === filter.slice(5))
       || (filter.startsWith('type:') && card.dataset.type === filter.slice(5))
       || (
         filter.startsWith('category:')

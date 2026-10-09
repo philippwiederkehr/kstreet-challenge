@@ -1,5 +1,5 @@
 // KSTREET CHALLENGE - Service Worker
-const CACHE_VERSION = 'v30';
+const CACHE_VERSION = 'v31';
 const CACHE_NAME = `kstreet-${CACHE_VERSION}`;
 
 // App shell files to pre-cache on install
@@ -7,7 +7,7 @@ const APP_SHELL = [
   '/',
   '/index.html',
   '/style.css?v=16',
-  '/script.js?v=23',
+  '/script.js?v=24',
   '/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
@@ -16,20 +16,27 @@ const APP_SHELL = [
 // ── Install: pre-cache app shell ─────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
   );
 });
 
 // ── Activate: clean old caches, claim clients ────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key.startsWith('kstreet-') && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    (async () => {
+      const keys = await caches.keys();
+      const oldKeys = keys.filter(key => key.startsWith('kstreet-') && key !== CACHE_NAME);
+      await Promise.all(oldKeys.map(key => caches.delete(key)));
+      await self.clients.claim();
+
+      // Returning visitors may have opened cached HTML from the previous worker.
+      // Reload once on upgrades so they receive the current app and default filter.
+      if (oldKeys.length > 0) {
+        const clients = await self.clients.matchAll({ type: 'window' });
+        // Navigation fetches wait for activation, so do not await them here.
+        clients.forEach(client => client.navigate(client.url).catch(() => {}));
+      }
+    })()
   );
 });
 
@@ -54,9 +61,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Open the current app online; keep the installed shell available offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
   // App shell (HTML, CSS, JS, SVG) — stale-while-revalidate
   event.respondWith(staleWhileRevalidate(event.request));
 });
+
+// ── Network-first navigation strategy ────────────
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+      return response;
+    }
+  } catch {
+    // Fall back to the installed app when the network is unavailable.
+  }
+
+  return await caches.match(request)
+    || await caches.match('/index.html')
+    || new Response('Offline', { status: 503, statusText: 'Offline' });
+}
 
 // ── Cache-first strategy ─────────────────────────
 async function cacheFirst(request) {
