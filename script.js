@@ -106,6 +106,7 @@ const feedState = {
   query: '',
   showAll: false
 };
+const playerHistoryState = { name: '', trigger: null, scrollY: 0, bodyTop: '' };
 
 // ── Initialization ─────────────────────────────
 document.addEventListener('DOMContentLoaded', startApp);
@@ -114,6 +115,7 @@ function startApp() {
   setupChallengeSearch();
   setupChallengeSort();
   setupFeedControls();
+  setupPlayerHistory();
   setupKonamiCode();
   updateCountdown();
   window.setInterval(updateCountdown, 60000);
@@ -369,6 +371,7 @@ function normalizeCompletions(raw) {
   const columns = {
     date: keyFor(['date', 'completed on', 'completion date']),
     name: keyFor(['name', 'person', 'participant', 'done by', 'completed by']),
+    performer: keyFor(['guests and challengers', 'performer', 'completed by', 'done by']),
     challenge: keyFor(['challenge', 'challenge name', 'mission', 'mission name']),
     points: keyFor(['points', 'score'])
   };
@@ -376,6 +379,7 @@ function normalizeCompletions(raw) {
   return raw.map(row => ({
     Date: normalizeValue(row[columns.date]),
     Name: normalizeValue(row[columns.name]),
+    Performer: normalizeValue(row[columns.performer]),
     Challenge: normalizeValue(row[columns.challenge]),
     Points: normalizeValue(row[columns.points])
   })).filter(row => {
@@ -614,6 +618,9 @@ function renderAll() {
   renderChallenges(challengesData, completionCounts, challengeCompletions);
   renderFeed(completionsData);
   renderStats(rankings, getCompletionCounts(completionsData));
+  if (document.getElementById('player-history')?.open) {
+    renderPlayerHistory(playerHistoryState.name);
+  }
 }
 
 function renderPodium(rankings) {
@@ -960,8 +967,85 @@ function updateCountdown() {
 
 function playerNameMarkup(name, className) {
   return name
-    ? `<span class="${escapeAttr(className)}">${escapeHTML(name)}</span>`
+    ? `<button type="button" class="player-name ${escapeAttr(className)}" data-player="${escapeAttr(name)}" aria-haspopup="dialog" aria-controls="player-history" aria-label="View challenge history for ${escapeAttr(name)}">${escapeHTML(name)}</button>`
     : `<span class="${escapeAttr(className)}"></span>`;
+}
+
+// ── Player History ─────────────────────────────
+function getPlayerHistory(name, completions = completionsData) {
+  // Match the leaderboard's exact sheet name: similarly named players stay separate.
+  return completions.filter(row => row.Name.trim() === name.trim())
+    .sort((a, b) => parseDate(b.Date) - parseDate(a.Date));
+}
+
+function renderPlayerHistory(name) {
+  const rows = getPlayerHistory(name);
+  const points = rows.reduce((total, row) => {
+    const score = parsePoints(row.Points);
+    return total + (Number.isFinite(score) ? score : 0);
+  }, 0);
+  document.getElementById('player-history-name').textContent = name;
+  document.getElementById('player-history-count').textContent = rows.length;
+  document.getElementById('player-history-points').textContent = points;
+  document.getElementById('player-history-list').innerHTML = rows.length
+    ? rows.map(row => {
+        const points = parsePoints(row.Points);
+        const pointsClass = Number.isFinite(points) && points < 0 ? ' negative' : '';
+        const performer = row.Performer && row.Performer !== row.Name
+          ? `<p class="player-history-performer">Completed by ${escapeHTML(row.Performer)}</p>`
+          : '';
+        return `<li class="player-history-entry">
+          <div class="player-history-entry-heading">
+            <h3>${escapeHTML(row.Challenge)}</h3>
+            <span class="player-history-entry-points${pointsClass}">${escapeHTML(formatCompletionPoints(row.Points))}</span>
+          </div>
+          <p class="player-history-date">${escapeHTML(row.Date || 'Date not recorded')}</p>
+          ${performer}
+        </li>`;
+      }).join('')
+    : '<li class="player-history-empty">No challenge entries yet.</li>';
+}
+
+function openPlayerHistory(name, trigger) {
+  const dialog = document.getElementById('player-history');
+  if (!dialog || dialog.open) return;
+  playerHistoryState.name = name;
+  playerHistoryState.trigger = trigger;
+  playerHistoryState.scrollY = window.scrollY;
+  playerHistoryState.bodyTop = document.body.style.top;
+  renderPlayerHistory(name);
+  document.body.style.top = `-${playerHistoryState.scrollY}px`;
+  document.body.classList.add('player-history-open');
+  dialog.showModal();
+  dialog.scrollTop = 0;
+}
+
+function setupPlayerHistory() {
+  const dialog = document.getElementById('player-history');
+  if (!dialog) return;
+  // Delegation also covers names rebuilt by searches, sorting and sheet refreshes.
+  document.getElementById('app').addEventListener('click', event => {
+    const trigger = event.target.closest('button[data-player]');
+    if (trigger) openPlayerHistory(trigger.dataset.player, trigger);
+  });
+  document.getElementById('player-history-close').addEventListener('click', () => dialog.close());
+  // The dialog itself has no padding, so only clicks outside its bounds dismiss it.
+  dialog.addEventListener('click', event => {
+    if (event.target !== dialog) return;
+    const bounds = dialog.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right
+      || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+  });
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('player-history-open');
+    document.body.style.top = playerHistoryState.bodyTop;
+    window.scrollTo({ top: playerHistoryState.scrollY, behavior: 'instant' });
+    const trigger = playerHistoryState.trigger?.isConnected
+      ? playerHistoryState.trigger
+      : [...document.querySelectorAll('button[data-player]')].find(button => button.dataset.player === playerHistoryState.name);
+    trigger?.focus({ preventScroll: true });
+    playerHistoryState.trigger = null;
+  });
 }
 
 // ── Category Filtering ─────────────────────────

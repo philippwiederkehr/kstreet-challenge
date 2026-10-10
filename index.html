@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -195,10 +195,26 @@
 
   </div>
 
+  <dialog id="player-history" class="player-history" aria-labelledby="player-history-name" aria-describedby="player-history-description">
+    <header class="player-history-header">
+      <div class="player-history-heading">
+        <p class="player-history-kicker">PLAYER HISTORY</p>
+        <h2 id="player-history-name"></h2>
+      </div>
+      <button type="button" id="player-history-close" class="player-history-close" aria-label="Close player history" autofocus>&times;</button>
+    </header>
+    <div class="player-history-stats">
+      <div><strong id="player-history-count">0</strong><span>ENTRIES</span></div>
+      <div><strong id="player-history-points">0</strong><span>POINTS</span></div>
+    </div>
+    <p id="player-history-description" class="player-history-description">All recorded entries · newest first</p>
+    <ul id="player-history-list" class="player-history-list" aria-label="Challenge history" tabindex="0"></ul>
+  </dialog>
+
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <script src="script.js?v=24"></script>
+  <script src="script.js?v=25"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

@@ -24,7 +24,7 @@ test('an upgrade finishes activation before waiting on client navigation', async
       }
     },
     caches: {
-      async keys() { return ['kstreet-v30', 'kstreet-v31', 'unrelated']; },
+      async keys() { return ['kstreet-v31', 'kstreet-v32', 'unrelated']; },
       async delete(key) { actions.push(`delete:${key}`); }
     }
   });
@@ -42,5 +42,5 @@ test('an upgrade finishes activation before waiting on client navigation', async
   } finally {
     clearTimeout(timeout);
   }
-  assert.deepEqual(actions, ['delete:kstreet-v30', 'claim', 'https://kstreet.online/#challenges']);
+  assert.deepEqual(actions, ['delete:kstreet-v31', 'claim', 'https://kstreet.online/#challenges']);
 });
